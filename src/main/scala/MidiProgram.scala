@@ -22,7 +22,7 @@ object MidiProgram {
 
 case class MidiProgram(val program : Int) {
   val isMelodic : Boolean =
-    !synthEffects.contains(program) &&
-    !percussive.contains(program) &&
-    !soundEffects.contains(program)
+    !MidiProgram.synthEffects.contains(program) &&
+    !MidiProgram.percussive.contains(program) &&
+    !MidiProgram.soundEffects.contains(program)
 }
