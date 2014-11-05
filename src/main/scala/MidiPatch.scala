@@ -1,6 +1,6 @@
 package ca.dubey.music
 
-object MidiProgram {
+object MidiPatch {
   val piano = 1 to 8
   val chromaticPercussion = 9 to 16
   val organ = 17 to 24
@@ -20,9 +20,9 @@ object MidiProgram {
 
 }
 
-case class MidiProgram(val program : Int) {
+case class MidiPatch(val program : Int) {
   val isMelodic : Boolean =
-    !MidiProgram.synthEffects.contains(program) &&
-    !MidiProgram.percussive.contains(program) &&
-    !MidiProgram.soundEffects.contains(program)
+    !MidiPatch.synthEffects.contains(program) &&
+    !MidiPatch.percussive.contains(program) &&
+    !MidiPatch.soundEffects.contains(program)
 }

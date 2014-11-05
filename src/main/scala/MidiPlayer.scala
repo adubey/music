@@ -33,7 +33,7 @@ class MidiPlayer extends MetaEventListener {
       sequencer.addMetaEventListener(this);
     } catch {
       case ex:MidiUnavailableException =>
-	sequencer = null;
+        sequencer = null;
     }
   }
 
@@ -45,8 +45,8 @@ class MidiPlayer extends MetaEventListener {
       return loadSequence(new FileInputStream(filename));
     } catch {
       case ex:IOException =>
-	ex.printStackTrace
-	return None
+        ex.printStackTrace
+        return None
     }
   }
 
@@ -56,22 +56,22 @@ class MidiPlayer extends MetaEventListener {
   def loadSequence(is : InputStream) : Option[Sequence] = {
     try {
       val buffered_is =
-	if (!is.markSupported) {
-	  new BufferedInputStream(is)
-	} else {
-	  is
-	}
-      val s = MidiSystem.getSequence(is);
-      buffered_is.close
-      return Some(s);
-    } catch {
-      case ex:InvalidMidiDataException =>
-	ex.printStackTrace();
-	return None
-      case ex:IOException =>
-	ex.printStackTrace();
-	return None
-    }
+        if (!is.markSupported) {
+          new BufferedInputStream(is)
+        } else {
+          is
+        }
+        val s = MidiSystem.getSequence(is);
+        buffered_is.close
+        return Some(s);
+      } catch {
+        case ex:InvalidMidiDataException =>
+          ex.printStackTrace();
+          return None
+        case ex:IOException =>
+          ex.printStackTrace();
+          return None
+      }
   }
 
   /**
@@ -98,9 +98,9 @@ class MidiPlayer extends MetaEventListener {
       this.loop = loop
     } catch {
       case ex:InvalidMidiDataException =>
-	ex.printStackTrace
+        ex.printStackTrace
     }
-    */
+     */
   }
 
   /**

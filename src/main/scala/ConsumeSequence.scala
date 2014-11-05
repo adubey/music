@@ -1,15 +1,17 @@
 package ca.dubey.music
 
-import javax.sound.midi.Sequence
 import javax.sound.midi.MidiMessage
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiChannel
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 import scala.collection.mutable.ArrayBuffer
 
 class ConsumeSequence(sequence : Sequence) {
   var tick : Long = 0
   val tracks = sequence.getTracks
   var trackEvent = Array.fill[Int](tracks.size)(0)
+  val channelStates = (0 until 16).map((i) => ChannelState(i))
   val variance = 1
   var chord = Chord()
   var song = ArrayBuffer.empty[Chord]
@@ -40,7 +42,18 @@ class ConsumeSequence(sequence : Sequence) {
   def updateChord(events : collection.mutable.Set[MidiEvent]) : Unit = {
     chord = Chord(chord)  // Clone.
     for(event <- events) {
-      chord.updateChordWithMessage(event.getMessage)
+      event.getMessage match {
+        case e:ShortMessage =>
+          e.getCommand match {
+            case ShortMessage.PROGRAM_CHANGE =>
+              channelStates(e.getChannel).patch = MidiPatch(e.getData1)
+            case _ =>
+              chord.updateChordWithShortMessage(e, channelStates(e.getChannel))
+          }
+        case _ =>
+          // Don't know how to deal with Sysex yet.
+          ()
+      }
     }
     // printf("Current chord: %s\n", chord.toString)
     song += Chord(chord)
@@ -54,35 +67,35 @@ class ConsumeSequence(sequence : Sequence) {
       var anyEventsAdded = false
       // printf("\tOn track %d\n", trackNum)
       do {
-	anyEventsAdded = false
-	for (event <- currentTrackEvent(trackNum)) {
-	  if (event.getTick < tick) {
-	    // Bad thing.
-	    printf("Warning: track %d event %d lower than expected tick %d vs %d\n",
-		trackNum, trackEvent(trackNum), event.getTick, tick)
-	  } else if (event.getTick <= tick + 1) {  // Allow +1 tick events through.
-	    // printf("\t\tAdding event at: %d\n", event.getTick)
-	    events += event
-	    advanceTrackEvent(trackNum)
-	    anyEventsAdded = true
-	  } else {
-	    // printf("\t\tLeaving event at: %d\n", event.getTick)
-	    if (minTick == -1 || event.getTick < minTick) {
-	      minTick = event.getTick
-	    }
-	  }
-	}
+        anyEventsAdded = false
+        for (event <- currentTrackEvent(trackNum)) {
+          if (event.getTick < tick) {
+            // Bad thing.
+            printf("Warning: track %d event %d lower than expected tick %d vs %d\n",
+              trackNum, trackEvent(trackNum), event.getTick, tick)
+          } else if (event.getTick <= tick + 1) {  // Allow +1 tick events through.
+            printf("\t\tAdding event at: %d\n", event.getTick)
+            events += event
+            advanceTrackEvent(trackNum)
+            anyEventsAdded = true
+          } else {
+            // printf("\t\tLeaving event at: %d\n", event.getTick)
+            if (minTick == -1 || event.getTick < minTick) {
+              minTick = event.getTick
+            }
+          }
+        }
       } while (anyEventsAdded)
     }
     if (events.size == 0 && minTick == tick && tick > 0) {
       // printf("Warning: no events added at tick: %d\n", tick)
       System.exit(1)
-    } /* else {
-      printf("Tick: %d, got %d events\n", tick, events.size)
-    } */
-    tick = minTick
-    updateChord(events)
-    return events
+      } /* else {
+        printf("Tick: %d, got %d events\n", tick, events.size)
+      } */
+     tick = minTick
+     updateChord(events)
+     return events
   }
 
   def consume = {
@@ -90,7 +103,7 @@ class ConsumeSequence(sequence : Sequence) {
     while (eventsLeft) {
       val events = gatherEvents
       if (events.size == 0) {
-	eventsLeft = false
+        eventsLeft = false
       }
     }
   }

@@ -18,9 +18,7 @@ object ChordTable {
       println
       return None
     }
-    Some((Chord.fromString(chords(0)),
-	  Chord.fromString(chords(1)),
-	  chordsProb(1).toDouble))
+    Some((Chord(chords(0)), Chord(chords(1)), chordsProb(1).toDouble))
   }
 
   def fromFile(filename : String) : ChordTable = {

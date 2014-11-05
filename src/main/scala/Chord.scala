@@ -6,17 +6,15 @@ import javax.sound.midi.MidiChannel
 import scala.collection.mutable.ArrayBuffer
 
 object Chord {
-  def apply(chord : Chord) = {
+  def apply(chord : Chord) : Chord = {
     new Chord(chord.notes.clone)
   }
 
-  def apply() = {
+  def apply() : Chord = {
     new Chord(ArrayBuffer.empty[Note])
   }
 
-  def apply(s : String) = fromString(s)
-
-  def fromString(s : String) : Chord = {
+  def apply(s : String) : Chord = {
     val ss = collection.mutable.Set.empty[String]
     for (s <- s.split(" ")) {
       ss += s
@@ -30,20 +28,13 @@ object Chord {
 }
 
 class Chord(val notes : ArrayBuffer[Note]) {
-  // Add a note on or off to this chord.
-  def updateChordWithMessage : MidiMessage => Unit = {
-    case e : ShortMessage =>
-      updateChordWithShortMessage(e)
-    case _ =>
-      ()
-  }
 
   override def hashCode : Int = notes.hashCode
 
   override def equals(other : Any) : Boolean = {
     other match {
       case that:Chord =>
-	(that canEqual this) && that.notes == this.notes
+        (that canEqual this) && that.notes == this.notes
       case _ => false
     }
   }
@@ -68,20 +59,21 @@ class Chord(val notes : ArrayBuffer[Note]) {
     }
   }
 
-  def updateChordWithShortMessage(e : ShortMessage) = {
+  def updateChordWithShortMessage(e : ShortMessage, state : ChannelState) = {
     e.getCommand match {
       case ShortMessage.NOTE_ON =>
-	if (e.getData2 == 0) {
-	  notes -= Note(e.getData1)
-	} else {
-	  notes += Note(e.getData1)
-	}
+        if (e.getData2 == 0) {
+          notes -= Note(e.getData1)
+        } else if (state.isMelodic) {
+          // Only process melodic NOTE_ONs
+          notes += Note(e.getData1)
+        }
       case ShortMessage.NOTE_OFF =>
-	notes -= Note(e.getData1)
+        notes -= Note(e.getData1)
       case _ =>
-	()
+        ()
     }
   }
-  
+
   override def toString = notes.map((note) => note.toString).mkString(" ")
 }
