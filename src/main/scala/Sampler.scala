@@ -20,14 +20,14 @@ object Sampler {
       printf("Done.\n")
       var chordOption : Option[Chord] = Some(Chord("C"))
       for (songs <- 0 to 20) {
-	for (notes <- 0 to 500) {
-	  for (chord <- chordOption) {
-	    chord.play(mc(5))
-	    printf("%s\n", chord)
-	    Thread.sleep(50)
-	    chordOption = chordTable.sample(chord)
-	  }
-	}
+        for (notes <- 0 to 500) {
+          for (chord <- chordOption) {
+            chord.play(mc(5))
+            printf("%s\n", chord)
+            Thread.sleep(50)
+            chordOption = chordTable.sample(chord)
+          }
+        }
       }
       Thread.sleep(1000)
     }
