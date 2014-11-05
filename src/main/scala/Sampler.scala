@@ -18,7 +18,7 @@ object Sampler {
       printf("Loading table.\n")
       val chordTable = ChordTable.fromFile(filename)
       printf("Done.\n")
-      var chordOption : Option[Chord] = Some(Chord("C"))
+      var chordOption : Option[Chord] = Some(Chord("C E G"))
       for (songs <- 0 to 20) {
 	for (notes <- 0 to 500) {
 	  for (chord <- chordOption) {

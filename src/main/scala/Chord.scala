@@ -14,6 +14,8 @@ object Chord {
     new Chord(ArrayBuffer.empty[Note])
   }
 
+  def apply(s : String) = fromString(s)
+
   def fromString(s : String) : Chord = {
     val ss = collection.mutable.Set.empty[String]
     for (s <- s.split(" ")) {
@@ -60,7 +62,7 @@ class Chord(val notes : ArrayBuffer[Note]) {
     for (note <- notes) {
       note.noteOn(mc)
     }
-    Thread.sleep(100)
+    Thread.sleep(300)
     for (note <- notes) {
       note.noteOff(mc)
     }
