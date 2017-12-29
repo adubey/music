@@ -36,14 +36,17 @@ trait TrackBuilder {
     addNoteOff(t, key, time + dur)
   }
 
+  protected def makeNoteOn(key : Int, time : Long, velocity : Int) : MidiEvent = {
+    return new MidiEvent(new ShortMessage(ShortMessage.NOTE_ON, channel, key, velocity), time)
+  }
+
   protected def addNoteOn(t : Track, key : Int, time : Long, velocity : Int = 0x60) : Unit = {
     if (velocity == 0) {
       addNoteOff(t, key, time)
       return
     }
 
-    var mm = new ShortMessage()
-    t.add(new MidiEvent(new ShortMessage(ShortMessage.NOTE_ON, channel, key, velocity), time))
+    t.add(makeNoteOn(key, time, velocity))
   }
 
   protected def addNoteOff(t : Track, key : Int, time : Long) : Unit = {
