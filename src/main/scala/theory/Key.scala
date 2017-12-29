@@ -2,8 +2,8 @@ package ca.dubey.music.theory
 
 import javax.sound.midi.MidiChannel
 
-object Note {
-  val notes = Array(
+object Key {
+  val keysWithSharps = Array(
     "C",
     "C#",
     "D",
@@ -18,32 +18,54 @@ object Note {
     "B"
   )
 
-  def fromString : String => Note = {
-    case "C"  => new Note(60)
-    case "C#" => new Note(61)
-    case "D"  => new Note(62)
-    case "D#" => new Note(63)
-    case "E"  => new Note(64)
-    case "F"  => new Note(65)
-    case "F#" => new Note(66)
-    case "G"  => new Note(67)
-    case "G#" => new Note(68)
-    case "A"  => new Note(69)
-    case "A#" => new Note(70)
-    case "B"  => new Note(71)
-    case _    => new Note(0)
+  val keysWithFlats = Array(
+    "C",
+    "Db",
+    "D",
+    "Eb",
+    "E",
+    "F",
+    "Fb",
+    "G",
+    "Gb",
+    "A",
+    "Bb",
+    "B"
+  )
+
+  val keys = keysWithSharps
+
+  def fromString : String => Key = {
+    case "C"  => new Key(60)
+    case "C#" => new Key(61)
+    case "Db" => new Key(61)
+    case "D"  => new Key(62)
+    case "D#" => new Key(63)
+    case "Eb" => new Key(63)
+    case "E"  => new Key(64)
+    case "F"  => new Key(65)
+    case "F#" => new Key(66)
+    case "Gb" => new Key(66)
+    case "G"  => new Key(67)
+    case "G#" => new Key(68)
+    case "Ab" => new Key(68)
+    case "A"  => new Key(69)
+    case "A#" => new Key(70)
+    case "Bb" => new Key(70)
+    case "B"  => new Key(71)
+    case _    => new Key(0)
   }
 
-  def midiToString(midiNote : Int) : String = notes(midiNote % 12)
-  def midiToOctave(midiNote : Int) : Int = midiNote / 12
+  def midiToString(midiKey : Int) : String = keys(midiKey % 12)
+  def midiToOctave(midiKey : Int) : Int = midiKey / 12
 }
 
 /**
-  * Represent a note
+  * Represent a key (a note's pitch).
   */
-case class Note(val value : Int) {
-  val name = Note.midiToString(value)
-  val octave = Note.midiToOctave(value)
+case class Key(val value : Int) {
+  val name = Key.midiToString(value)
+  val octave = Key.midiToOctave(value)
 
   override def toString = name
 
@@ -51,11 +73,11 @@ case class Note(val value : Int) {
 
   override def equals(other : Any) : Boolean = {
     other match {
-      case that:Note =>
+      case that:Key =>
 	(that canEqual this) && that.value == this.value
       case _ => false
     }
   }
 
-  def canEqual(other : Any) : Boolean = other.isInstanceOf[Note]
+  def canEqual(other : Any) : Boolean = other.isInstanceOf[Key]
 }

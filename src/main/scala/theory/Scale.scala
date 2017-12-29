@@ -1,8 +1,8 @@
 package ca.dubey.music.theory
 
-trait Key {
-  val baseNote : Int
+trait Scale {
+  val baseKey : Int
   val intervals : Array[Int]
-  val notes : Array[Note]
+  val notes : Array[Key]
 }
 

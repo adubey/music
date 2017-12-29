@@ -5,10 +5,10 @@ import javax.sound.midi.ShortMessage
 import scala.collection.mutable.ArrayBuffer
 
 object Chord {
-  def apply() : Chord = new Chord(List.empty[Note])
+  def apply() : Chord = new Chord(List.empty[Key])
 
-  def apply(notes : Array[Note]) : Chord = new Chord(notes.toList)
-  def apply(notes : List[Note]) : Chord = new Chord(notes)
+  def apply(notes : Array[Key]) : Chord = new Chord(notes.toList)
+  def apply(notes : List[Key]) : Chord = new Chord(notes)
 
   /**
     * Construct a Chord from a string of notes
@@ -20,15 +20,15 @@ object Chord {
     for (s <- s.split(" ")) {
       ss += s
     }
-    val notes = List.newBuilder[Note]
+    val notes = List.newBuilder[Key]
     for (note <- ss) {
-      notes += Note.fromString(note)
+      notes += Key.fromString(note)
     }
     new Chord(notes.result)
   }
 }
 
-class Chord(val notes : List[Note]) {
+class Chord(val notes : List[Key]) {
 
   override def hashCode : Int = notes.hashCode
 

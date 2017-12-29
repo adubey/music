@@ -1,6 +1,6 @@
 package ca.dubey.music.theory
 
-/** How long each note lasts in MIDI ticks */
+/** Represent a note's value (duration) */
 case class NoteValue(val ticksPerQuarterNote : Int) {
   /** Quaiver */
   val eighthNote = ticksPerQuarterNote / 2

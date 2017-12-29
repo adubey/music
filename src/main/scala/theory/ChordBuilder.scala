@@ -4,7 +4,7 @@ import ca.dubey.music.midi.ChannelInfo
 import javax.sound.midi.ShortMessage
 import scala.collection.mutable.ArrayBuffer
 
-case class ChordBuilder(val notes : ArrayBuffer[Note] = ArrayBuffer.empty[Note]) {
+case class ChordBuilder(val notes : ArrayBuffer[Key] = ArrayBuffer.empty[Key]) {
   def +=(e : ShortMessage, info : ChannelInfo) : Unit = {
     e.getCommand match {
       case ShortMessage.NOTE_ON =>
@@ -13,10 +13,10 @@ case class ChordBuilder(val notes : ArrayBuffer[Note] = ArrayBuffer.empty[Note])
 	}
         if (e.getData2 == 0) {
 	  // Treat a silent NOTE ON is a note off.
-          notes -= Note(e.getData1)
+          notes -= Key(e.getData1)
         } else {
           // Only process melodic NOTE_ONs
-	  val note = Note(e.getData1)
+	  val note = Key(e.getData1)
 	  if (!notes.contains(note)) {
 	    notes += note
 	  }
@@ -25,7 +25,7 @@ case class ChordBuilder(val notes : ArrayBuffer[Note] = ArrayBuffer.empty[Note])
 	if (!info.isMelodic) {
 	  return;
 	}
-        notes -= Note(e.getData1)
+        notes -= Key(e.getData1)
       case _ =>
         ()
     }
