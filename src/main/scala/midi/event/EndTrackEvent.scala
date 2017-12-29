@@ -14,8 +14,8 @@ object EndTrackEvent extends EventCompanion[EndTrackEvent] {
 case class EndTrackEvent(bpm : Int) extends Event {
 
   override def toMidiEvent : MidiEvent = {
-    val mt = new MetaMessage()
-    mt.setMessage(EndTrackEvent.EVENT_ID, Array[Byte](), 0)
-    return new MidiEvent(mt, ticks)
+    return new MidiEvent(
+      new MetaMessage(EndTrackEvent.EVENT_ID, Array[Byte](), 0),
+      ticks)
   }
 }

@@ -23,10 +23,12 @@ class TimeSignatureEvent(
   val timeSignature = new TimeSignature(n, 2 << (d-1))
 
   override def toMidiEvent : MidiEvent = {
-    val bt : Array[Byte] = Array[Byte](0x04, n, d, metronome, eight)
-    val mt = new MetaMessage()
-    mt.setMessage(TimeSignatureEvent.EVENT_ID, bt, 4)
-    return new MidiEvent(mt, 0L)
+    return new MidiEvent(
+        new MetaMessage(
+            TimeSignatureEvent.EVENT_ID,
+            Array[Byte](n, d, metronome, eight),
+            4),
+        0L)
   }
 
   override def toString : String = {

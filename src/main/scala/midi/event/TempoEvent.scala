@@ -13,7 +13,7 @@ object TempoEvent extends EventCompanion[TempoEvent] {
   def fromMidiEventData(data : Array[Byte]) : Option[TempoEvent] = {
     val midiTempo = ((data(0) & 0xFF) << 16) |
                     ((data(1) & 0xFF) << 8) |
-                     (data(0) & 0xFF)
+                     (data(2) & 0xFF)
     Some(new TempoEvent((MS_IN_TICKS / midiTempo).toInt))
   }
 
@@ -29,13 +29,12 @@ case class TempoEvent(bpm : Int) extends Event {
     var midiTempo = TempoEvent.MS_IN_TICKS / bpm;
     // assert(0 < midiTempo && midiTempo < 0xFFFFFF)
     return new MidiEvent(
-      MetaMessage(
+      new MetaMessage(
         TempoEvent.EVENT_ID,
         Array[Byte](
-          0x03,
-          ((midiTempo & HIGH_BITS) >> 16).asInstanceOf[Byte]
-          ((midiTempo &  MID_BITS) >> 8).asInstanceOf[Byte]
-          ((midiTempo & LOW_BITS)).asInstanceOf[Byte]
+          ((midiTempo & HIGH_BITS) >> 16).asInstanceOf[Byte],
+          ((midiTempo &  MID_BITS) >> 8).asInstanceOf[Byte],
+          ((midiTempo & LOW_BITS)).asInstanceOf[Byte]),
         3),
       ticks)
   }
