@@ -13,22 +13,25 @@ object KeySignatureEvent extends EventCompanion[KeySignatureEvent] {
   val EVENT_ID = 0x59
 
   def fromMidiEventData(data : Array[Byte]) : Option[KeySignatureEvent] = {
-    val tonality = if (data(1) == 0) { Major } else { Minor }
-    val baseKey = KeySignature.baseKeyFromTonalityAndNumAccidentals(tonality, data(0))
-    return Some(new KeySignatureEvent(baseKey, tonality, data(0)))
+    val tonality = Tonality.fromByte(data(1))
+    val k = KeySignature.fromTonalityAndNumAccidentals(tonality, data(0))
+    return Some(new KeySignatureEvent(k))
+  }
+
+  def apply(n : Key, t : Tonality) : KeySignatureEvent = {
+    new KeySignatureEvent(new KeySignature(n, t))
   }
 }
 
-class KeySignatureEvent(n : Key, t : Tonality, a : Byte) extends Event {
-
-  val keySignature = new KeySignature(n, t)
-
+class KeySignatureEvent(val keySignature : KeySignature) extends Event {
   override def toMidiEvent : MidiEvent = {
-    val mt = new MetaMessage()
-    mt.setMessage(
-        KeySignatureEvent.EVENT_ID,
-        Array[Byte](a, t match { case Major => 0 case Minor => 1 }),
-        2)
-    return new MidiEvent(mt, 0L)
+    return new MidiEvent(
+        new MetaMessage(
+            KeySignatureEvent.EVENT_ID,
+            Array[Byte](
+              keySignature.numAccidentals.toByte,
+              keySignature.tonality.toByte),
+            2),
+        0L)
   }
 }

@@ -1,13 +1,45 @@
 package ca.dubey.music.theory
 
-class Tonality
-case object Major extends Tonality
-case object Minor extends Tonality
+class KeySignature(val baseKey : Key, val tonality : Tonality) {
+  def numAccidentals : Int = ((tonality, baseKey.toString)) match {
+    case (Major, "Cb") => -7
+    case (Major, "Gb") => -6
+    case (Major, "Db") => -5
+    case (Major, "Ab") => -4
+    case (Major, "Eb") => -3
+    case (Major, "Bb") => -2
+    case (Major, "F") => -1
+    case (Major, "C") => 0
+    case (Major, "G") => 1
+    case (Major, "D") => 2
+    case (Major, "A") => 3
+    case (Major, "E") => 4
+    case (Major, "B") => 5
+    case (Major, "F#") => 6
+    case (Major, "C#") => 7
 
-class KeySignature(val baseKey : Key, val tonality : Tonality)
+    case (Minor, "Ab") => -7
+    case (Minor, "Eb") => -6
+    case (Minor, "Bb") => -5
+    case (Minor, "F") => -4
+    case (Minor, "C") => -3
+    case (Minor, "G") => -2
+    case (Minor, "D") => -1
+    case (Minor, "A") => 0
+    case (Minor, "E") => 1
+    case (Minor, "B") => 2
+    case (Minor, "F#") => 3
+    case (Minor, "C#") => 4
+    case (Minor, "D#") => 5
+    case (Minor, "G#") => 6
+    case (Minor, "A#") => 7
+  }
+}
 
 object KeySignature extends Enumeration {
-  val baseKeyFromTonalityAndNumAccidentals : (Tonality, Int) => Key = {
+  def apply(k : Key, t : Tonality) = new KeySignature(k, t)
+
+  val baseKeyFromTonalityAndNumAccidentals : (Tonality, Byte) => Key = {
     case (Major, -7) => Key.fromString("Cb")
     case (Major, -6) => Key.fromString("Gb")
     case (Major, -5) => Key.fromString("Db")
@@ -41,7 +73,11 @@ object KeySignature extends Enumeration {
     case (Minor, 7) => Key.fromString("A#")
   }
 
-  def fromTonalityAndNumAccidentals(tonality : Tonality, numAccidentals : Int) = {
-    new KeySignature(baseKeyFromTonalityAndNumAccidentals(tonality, numAccidentals), tonality)
+  def fromTonalityAndNumAccidentals(
+      tonality : Tonality, numAccidentals : Byte) = {
+    new KeySignature(
+        baseKeyFromTonalityAndNumAccidentals(
+            tonality, numAccidentals),
+        tonality)
   }
 }
