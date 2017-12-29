@@ -1,11 +1,10 @@
-package ca.dubey.music.learn
+package ca.dubey.music.percussion
 
 import ca.dubey.music.midi.ChannelInfo
 import ca.dubey.music.midi.File
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
-import ca.dubey.music.percussion.Data
 import cc.mallet.classify.ClassifierTrainer
 import cc.mallet.classify.MaxEntTrainer
 import cc.mallet.classify.MaxEnt

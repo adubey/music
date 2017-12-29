@@ -1,4 +1,4 @@
-package ca.dubey.music.learn
+package ca.dubey.music.melodic
 
 import java.io.BufferedInputStream
 import java.io.FileInputStream

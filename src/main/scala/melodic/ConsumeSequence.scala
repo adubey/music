@@ -1,4 +1,4 @@
-package ca.dubey.music.learn
+package ca.dubey.music.melodic
 
 import ca.dubey.music.midi.ChannelInfo
 import ca.dubey.music.midi.Patch
