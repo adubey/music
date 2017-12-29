@@ -1,10 +1,7 @@
 package ca.dubey.music
 
 import ca.dubey.music.theory.Chord
-import ca.dubey.music.theory.Note
 import javax.sound.midi.Track
-import javax.sound.midi.ShortMessage
-import javax.sound.midi.MidiEvent
 
 case class SongElement(val r : RhythmElement, val m : Chord)
 

@@ -2,8 +2,6 @@ package ca.dubey.music
 
 import ca.dubey.music.prob.ChordTable
 import ca.dubey.music.theory.Chord
-import ca.dubey.music.theory.MajorKey
-import ca.dubey.music.theory.Note
 
 class MelodyPattern(val pattern : Array[Chord]) {
   def numStrikes = pattern.size
