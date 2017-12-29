@@ -4,7 +4,7 @@ import ca.dubey.music.prob.ChordTable
 import javax.sound.midi.Sequencer
 import javax.sound.midi.MidiSystem
 
-object Generate extends App {
+object Generator extends App {
 
     for (arg <- args) {
       val table = ChordTable.fromFile(arg)

@@ -25,7 +25,7 @@ import javax.sound.midi.ShortMessage
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.Track
 
-object Generate extends App {
+object Generator extends App {
   val modelFilename = args(0)
   val TICKS_PER_BEAT = 24
   val sequencer = MidiSystem.getSequencer
@@ -35,14 +35,14 @@ object Generate extends App {
   val classifier = ois.readObject.asInstanceOf[MaxEnt]
   ois.close
 
-  val builder = new Percussion(TICKS_PER_BEAT, 90, classifier)
+  val builder = new Generator(TICKS_PER_BEAT, 90, classifier)
   builder.build
   builder.play(sequencer)
 
   System.exit(0)
 }
 
-class Percussion(
+class Generator(
     val ticksPerBeat : Int,
     val tempo : Int,
     val classifier : MaxEnt)
