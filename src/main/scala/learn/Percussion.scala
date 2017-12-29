@@ -35,7 +35,7 @@ object Percussion extends App {
   val classifier = ois.readObject.asInstanceOf[MaxEnt]
   ois.close
 
-  val builder = new Percussion(TICKS_PER_BEAT, 60, classifier)
+  val builder = new Percussion(TICKS_PER_BEAT, 90, classifier)
   builder.build
   builder.play(sequencer)
 
@@ -59,8 +59,8 @@ class Percussion(
     val classification = classifier.classify(instance)
     val labeling = classification.getLabeling
     var p = 0D
-    val targetProb = r.nextDouble * (1 - labeling.getValueAtRank(0))
-    for (j <- 1 until alphabet.size) {
+    val targetProb = r.nextDouble
+    for (j <- 0 until alphabet.size) {
       p += labeling.getValueAtRank(j)
       val label = labeling.getLabelAtRank(j)
       // val string = alphabet.lookupObject(label.getIndex).asInstanceOf[String]
@@ -89,7 +89,7 @@ class Percussion(
       q += alphabet.lookupLabel("START")
     }
 
-    for (i <- 1 to 60) {
+    for (i <- 1 to 500) {
       sampleNextNote(r, q) match {
         case None => return t
         case Some(label) =>

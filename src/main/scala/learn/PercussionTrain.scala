@@ -107,7 +107,7 @@ class PercussionTrain(val alphabet : LabelAlphabet, val maxLength : Int) {
           }
           anyNotes = false
         }
-      else if (!line.startsWith("Info")) {
+      } else if (!line.startsWith("Info")) {
         nextTrainingExample(convertToFeature(line))
         anyNotes = true
       }
