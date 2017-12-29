@@ -13,7 +13,7 @@ object Generate extends App {
       val sequencer = MidiSystem.getSequencer
       sequencer.open
 
-      val builder = new TrackBuilder(TICKS_PER_BEAT, BEATS_PER_MINUTE, table)
+      val builder = new TrackGenerator(TICKS_PER_BEAT, BEATS_PER_MINUTE, table)
       builder.build
       builder.play(sequencer)
 

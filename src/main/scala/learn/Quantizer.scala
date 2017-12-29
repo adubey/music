@@ -2,14 +2,14 @@ package ca.dubey.music.learn
 
 import scala.collection.immutable.TreeSet
 
-object Quantize {
-  def apply(xs : Int*) : Quantize = {
+object Quantizer {
+  def apply(xs : Int*) : Quantizer = {
     val set = (TreeSet.newBuilder[Int] ++= xs).result
-    return new Quantize(set, set.map((x : Int) => -x))
+    return new Quantizer(set, set.map((x : Int) => -x))
   }
 }
 
-class Quantize(val set : TreeSet[Int], negativeSet : TreeSet[Int]) extends Iterable[Int] {
+class Quantizer(val set : TreeSet[Int], negativeSet : TreeSet[Int]) extends Iterable[Int] {
   override def iterator : Iterator[Int] = set.iterator
 
   def quantize(x : Int) : Int = {

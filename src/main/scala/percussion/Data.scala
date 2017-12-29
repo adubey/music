@@ -1,6 +1,6 @@
 package ca.dubey.music.percussion
 
-import ca.dubey.music.learn.Quantize
+import ca.dubey.music.learn.Quantizer
 import cc.mallet.types.Alphabet
 import cc.mallet.types.Label
 import cc.mallet.types.LabelAlphabet
@@ -18,16 +18,16 @@ import javax.sound.midi.Track
 
 object Data {
   /*
-  val velocityQuanta = Quantize(0, 16, 30, 48, 64, 80, 90, 100, 110, 123, 127)
-  val tickQuanta = Quantize(0, 1, 2, 4, 12, 24, 32, 48, 96, 192)
+  val velocityQuantizer = Quantizer(0, 16, 30, 48, 64, 80, 90, 100, 110, 123, 127)
+  val tickQuantizer = Quantizer(0, 1, 2, 4, 12, 24, 32, 48, 96, 192)
   */
-  val velocityQuanta = Quantize(0, 50, 100, 127)
-  val tickQuanta = Quantize(0, 1, 12, 24, 48)
+  val velocityQuantizer = Quantizer(0, 50, 100, 127)
+  val tickQuantizer = Quantizer(0, 1, 12, 24, 48)
 
   val noteLow = 32
   val noteHigh = 82
   /** The range of notes is actually 33 to 81, but leave a low and high for unknown notes */
-  val noteQuanta = Quantize(noteLow to noteHigh : _*)
+  val noteQuantizer = Quantizer(noteLow to noteHigh : _*)
 
   val noteLabel = raw"(\d+)_(\d+)_(\d+)".r
 
@@ -42,9 +42,9 @@ object Data {
   def encode(alphabet : LabelAlphabet, tick : Int, note : Int, velocity : Int, expand : Boolean = false) : Label = {
     alphabet.lookupLabel(
         "%d_%d_%d".format(
-            tickQuanta.quantize(tick),
-            noteQuanta.quantize(note),
-            velocityQuanta.quantize(velocity)),
+            tickQuantizer.quantize(tick),
+            noteQuantizer.quantize(note),
+            velocityQuantizer.quantize(velocity)),
           expand)
   }
 
@@ -66,9 +66,9 @@ object Data {
     alphabet.startGrowth
     alphabet.lookupLabel("START", true)
     alphabet.lookupLabel("STOP", true)
-    for (tick <- tickQuanta.set) {
-      for (note <- noteQuanta.set) {
-        for (velocity <- velocityQuanta.set) {
+    for (tick <- tickQuantizer.set) {
+      for (note <- noteQuantizer.set) {
+        for (velocity <- velocityQuantizer.set) {
           encode(alphabet, tick, note, velocity, true)
         }
       }

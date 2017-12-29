@@ -29,14 +29,14 @@ import javax.sound.midi.ShortMessage
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.Track
 
-object PercussionTrain extends App {
+object Train extends App {
   val eventsFile = args(0)
   val outputFile = args(1)
   val maxLength = 4
 
-  def loadInstances(filename : String) : PercussionTrain = {
+  def loadInstances(filename : String) : Train = {
     val alphabet = Data.makeAlphabet
-    val data = new PercussionTrain(Data.makeAlphabet, maxLength)
+    val data = new Train(Data.makeAlphabet, maxLength)
     data.loadInstances(filename)
     data
   }
@@ -51,7 +51,7 @@ object PercussionTrain extends App {
   ois.close();
 }
 
-class PercussionTrain(val alphabet : LabelAlphabet, val maxLength : Int) {
+class Train(val alphabet : LabelAlphabet, val maxLength : Int) {
   val noteOnEvent = raw"\+ (\d+) (\d+) (\d+)".r
   val noteOffEvent = raw"- (\d+) (\d+)".r
   val instanceList = new InstanceList(alphabet, alphabet)

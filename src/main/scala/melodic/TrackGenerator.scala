@@ -5,6 +5,7 @@ import ca.dubey.music.prob.Prob
 import ca.dubey.music.theory.NoteValue
 import ca.dubey.music.midi.Patch
 import ca.dubey.music.midi.SequencePlayer
+import ca.dubey.music.midi.TrackBuilder
 import ca.dubey.music.midi.event.TempoEvent
 import javax.sound.midi.Sequence
 import javax.sound.midi.Sequencer
@@ -13,11 +14,11 @@ import javax.sound.midi.ShortMessage
 import javax.sound.midi.MetaMessage
 import javax.sound.midi.MidiEvent
 
-class TrackBuilder(
+class TrackGenerator(
     val ticksPerBeat : Int,
     val tempo : Int,
     chordTable : ChordTable)
-        extends SequencePlayer with ca.dubey.music.midi.TrackBuilder {
+        extends SequencePlayer with TrackBuilder {
   protected val sequence = new Sequence(Sequence.PPQ, ticksPerBeat)
   protected val t = sequence.createTrack
 
