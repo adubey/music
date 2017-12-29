@@ -12,5 +12,5 @@ case class ChannelInfo(val channelNumber : Int) {
   /**
     * Return true if this is a melodic (non-percussive or sound effects) track 
     */
-  val isMelodic = (channelNumber != 10) || patch.isMelodic
+  val isMelodic = (channelNumber != 9) || patch.isMelodic
 }
