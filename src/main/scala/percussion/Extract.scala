@@ -1,4 +1,4 @@
-package ca.dubey.music.learn
+package ca.dubey.music.percussion
 
 import ca.dubey.music.midi.ChannelInfo
 import ca.dubey.music.midi.File
@@ -20,7 +20,7 @@ import javax.sound.midi.ShortMessage
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.Track
 
-object PercussionExtract extends App {
+object Extract extends App {
   for (filename <- args) {
     for (sequence <- File.loadSequence(filename)) {
       val consumer = new PercussionExtract(sequence)
