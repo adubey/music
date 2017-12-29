@@ -1,14 +1,14 @@
 import org.scalatest.FlatSpec
 import org.scalatest.PrivateMethodTester
 import org.scalatest.PrivateMethodTester._
-import ca.dubey.music.ChordTable
-import ca.dubey.music.ChordTable._
-import ca.dubey.music.Chord
+import ca.dubey.music.prob.ChordTable
+import ca.dubey.music.prob.ChordTable._
+import ca.dubey.music.theory.Chord
 
 class ChordTableSpec extends FlatSpec with PrivateMethodTester {
   "A ChordTable" should "parse a line form a text file" in {
     val chord1 = ChordTable.parseLine("C | C = 0.8")
-    assert(chord1 == Some(Chord.fromString("C"), Chord.fromString("C"), 0.8))
+    assert(chord1 == Some((Chord("C"), Chord("C"), 0.8)))
   }
 
   "A ChordTable" should "get chords in decreasing probability" in {
