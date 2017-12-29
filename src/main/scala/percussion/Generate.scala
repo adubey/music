@@ -93,12 +93,12 @@ class Percussion(
       sampleNextNote(r, q) match {
         case None => return t
         case Some(label) =>
-          val (tick, note, velocity) = PercussionData.decode(label)
+          val (tick, note, velocity) = Data.decode(label)
           if (tick == 0 && note == 0 && velocity == 0) {
             printf("Stopped early: %s\n", label)
             return t
           }
-          time += PercussionData.unnormalizeTick(tick, ticksPerBeat)
+          time += Data.unnormalizeTick(tick, ticksPerBeat)
           addNoteOn(t, note, time, velocity)
           q += label
           q.dequeue

@@ -40,16 +40,16 @@ class PercussionExtract(sequence : Sequence) extends EventConsumer {
   var ons = 0
 
   def normalizedTime(tick : Long) : Int = {
-    PercussionData.normalizeTick(tick, time, sequence.getResolution)
+    Data.normalizeTick(tick, time, sequence.getResolution)
   }
 
   def quantizeVelocity(velocity : Int) : Int = {
-    // return PercussionData.velocityQuanta.quantize(velocity)
+    // return Data.velocityQuanta.quantize(velocity)
     return velocity
   }
 
   def quantizeTicks(ticks : Long) : Int = {
-    // return PercussionData.tickQuanta.quantize(normalizedTime(ticks))
+    // return Data.tickQuanta.quantize(normalizedTime(ticks))
     return normalizedTime(ticks)
   }
 

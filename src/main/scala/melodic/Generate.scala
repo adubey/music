@@ -1,10 +1,10 @@
-package ca.dubey.music
+package ca.dubey.music.melodic
 
 import ca.dubey.music.prob.ChordTable
 import javax.sound.midi.Sequencer
 import javax.sound.midi.MidiSystem
 
-object Main extends App {
+object Generate extends App {
 
     for (arg <- args) {
       val table = ChordTable.fromFile(arg)

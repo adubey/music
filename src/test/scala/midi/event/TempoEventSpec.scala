@@ -1,5 +1,6 @@
-import org.scalatest.FlatSpec
 import ca.dubey.music.midi.event.TempoEvent
+
+import org.scalatest.FlatSpec
 import javax.sound.midi.ShortMessage
 import javax.sound.midi.MetaMessage
 import javax.sound.midi.MidiEvent

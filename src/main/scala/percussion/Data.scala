@@ -1,5 +1,6 @@
 package ca.dubey.music.percussion
 
+import ca.dubey.music.learn.Quantize
 import cc.mallet.types.Alphabet
 import cc.mallet.types.Label
 import cc.mallet.types.LabelAlphabet

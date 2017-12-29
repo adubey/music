@@ -1,4 +1,4 @@
-package ca.dubey.music
+package ca.dubey.music.melodic
 
 import ca.dubey.music.prob.ChordTable
 import ca.dubey.music.theory.Chord

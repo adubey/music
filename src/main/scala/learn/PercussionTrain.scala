@@ -5,6 +5,7 @@ import ca.dubey.music.midi.File
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
+import ca.dubey.music.percussion.Data
 import cc.mallet.classify.ClassifierTrainer
 import cc.mallet.classify.MaxEntTrainer
 import cc.mallet.classify.MaxEnt
@@ -35,8 +36,8 @@ object PercussionTrain extends App {
   val maxLength = 4
 
   def loadInstances(filename : String) : PercussionTrain = {
-    val alphabet = PercussionData.makeAlphabet
-    val data = new PercussionTrain(PercussionData.makeAlphabet, maxLength)
+    val alphabet = Data.makeAlphabet
+    val data = new PercussionTrain(Data.makeAlphabet, maxLength)
     data.loadInstances(filename)
     data
   }
@@ -77,8 +78,8 @@ class PercussionTrain(val alphabet : LabelAlphabet, val maxLength : Int) {
 
   def convertToFeature(line : String) : Label = {
     line match {
-      case noteOnEvent(tick, note, velocity) => PercussionData.encode(alphabet, tick, note, velocity)
-      case noteOffEvent(tick, note) => PercussionData.encode(alphabet, tick, note, "0")
+      case noteOnEvent(tick, note, velocity) => Data.encode(alphabet, tick, note, velocity)
+      case noteOffEvent(tick, note) => Data.encode(alphabet, tick, note, "0")
     }
   }
 
