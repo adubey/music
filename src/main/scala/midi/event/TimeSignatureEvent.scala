@@ -32,6 +32,6 @@ class TimeSignatureEvent(
   }
 
   override def toString : String = {
-    "Time Signature %d / %d".format(n, d)
+    "Time Signature %d / %d".format(timeSignature.beatsPerMeasure, timeSignature.beatUnit)
   }
 }

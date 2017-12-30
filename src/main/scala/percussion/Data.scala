@@ -24,12 +24,14 @@ object Data {
   val velocityQuantizer = Quantizer(0, 50, 100, 127)
   val tickQuantizer = Quantizer(0, 1, 12, 24, 48)
 
-  val noteLow = 32
-  val noteHigh = 82
-  /** The range of notes is actually 33 to 81, but leave a low and high for unknown notes */
-  val noteQuantizer = Quantizer(noteLow to noteHigh : _*)
+  val keyLow = 32
+  val keyHigh = 82
+  /** The range of keys is actually 33 to 81, but leave a low and high for unknown keys */
+  val keyQuantizer = Quantizer(keyLow to keyHigh : _*)
 
   val noteLabel = raw"(\d+)_(\d+)_(\d+)".r
+
+  def isKeyInRange(key : Int) = key > keyLow && key < keyHigh
 
   def normalizeTick(tick : Long, lastTick : Long, resolution : Int) : Int = {
     (0.5 + 96.0 * (tick - lastTick) / resolution.toFloat).toInt
@@ -39,24 +41,24 @@ object Data {
     (0.5 + (resolution.toDouble * delta) / 96.0).toLong
   }
 
-  def encode(alphabet : LabelAlphabet, tick : Int, note : Int, velocity : Int, expand : Boolean = false) : Label = {
+  def encode(alphabet : LabelAlphabet, tick : Int, key : Int, velocity : Int, expand : Boolean = false) : Label = {
     alphabet.lookupLabel(
         "%d_%d_%d".format(
             tickQuantizer.quantize(tick),
-            noteQuantizer.quantize(note),
+            keyQuantizer.quantize(key),
             velocityQuantizer.quantize(velocity)),
           expand)
   }
 
-  def encode(alphabet : LabelAlphabet, tick : String, note : String, velocity : String) : Label = {
-    encode(alphabet, tick.toInt, note.toInt, velocity.toInt, false)
+  def encode(alphabet : LabelAlphabet, tick : String, key : String, velocity : String) : Label = {
+    encode(alphabet, tick.toInt, key.toInt, velocity.toInt, false)
   }
 
   def decode(label : Label) : (Int, Int, Int) = {
     val s = label.getEntry.asInstanceOf[String]
 
     s match {
-      case noteLabel(tick, note, velocity) => return (tick.toInt, note.toInt, velocity.toInt)
+      case noteLabel(tick, key, velocity) => return (tick.toInt, key.toInt, velocity.toInt)
       case _ => return (0, 0, 0)
     }
   }
@@ -67,9 +69,9 @@ object Data {
     alphabet.lookupLabel("START", true)
     alphabet.lookupLabel("STOP", true)
     for (tick <- tickQuantizer.set) {
-      for (note <- noteQuantizer.set) {
+      for (key <- keyQuantizer.set) {
         for (velocity <- velocityQuantizer.set) {
-          encode(alphabet, tick, note, velocity, true)
+          encode(alphabet, tick, key, velocity, true)
         }
       }
     }

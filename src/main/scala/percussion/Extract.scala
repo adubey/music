@@ -38,6 +38,7 @@ class PercussionExtract(sequence : Sequence) extends EventConsumer {
   var tempo : TempoEvent = null
   var timeSignature : TimeSignatureEvent = null
   var ons = 0
+  var wasExtracted = false
 
   def normalizedTime(tick : Long) : Int = {
     Data.normalizeTick(tick, time, sequence.getResolution)
@@ -61,29 +62,35 @@ class PercussionExtract(sequence : Sequence) extends EventConsumer {
   override def tempo(track : Track, event : MidiEvent, tempoEvent : TempoEvent) {
     tempo = tempoEvent
     printf("Info %s\n", tempo)
+    wasExtracted = true
   }
 
   override def timeSignature(track : Track, event : MidiEvent, timeSignatureEvent : TimeSignatureEvent) {
     timeSignature = timeSignatureEvent
     printf("Info %s\n", timeSignatureEvent)
+    wasExtracted = true
   }
 
-  override def noteOn(track : Track, event : MidiEvent, channel : Int, note : Int, velocity : Int) = {
-    if (channel == 9) {
+  override def noteOn(track : Track, event : MidiEvent, channel : Int, key : Int, velocity : Int) = {
+    if (channel == 9 && Data.isKeyInRange(key)) {
       ons += 1
-      printf("+ %d %d %d\n", quantizeTicks(event.getTick), note, quantizeVelocity(velocity))
-      printf("Info ons: %d\n", ons)
+      printf("+ %d %d %d\n", event.getTick - time, key, velocity)
+      wasExtracted = true
     }
   }
 
-  override def noteOff(track : Track, event : MidiEvent, channel : Int, note : Int) = {
-    if (channel == 9) {
+  override def noteOff(track : Track, event : MidiEvent, channel : Int, key : Int) = {
+    if (channel == 9 && Data.isKeyInRange(key)) {
       ons -= 1
-      printf("- %d %d\n", quantizeTicks(event.getTick), note)
+      printf("- %d %d\n", event.getTick - time, key)
+      wasExtracted = true
     }
   }
 
   override def eventPost(track : Track, event : MidiEvent) = {
-    time = event.getTick
+    if (wasExtracted) {
+      time = event.getTick
+      wasExtracted = false
+    }
   }
 }
