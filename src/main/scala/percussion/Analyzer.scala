@@ -20,6 +20,7 @@ import cc.mallet.types.Label
 import cc.mallet.types.LabelAlphabet
 import collection.mutable.ArrayBuffer
 import collection.mutable.ListBuffer
+import collection.mutable.Set
 import collection.mutable.Queue
 import io.Source
 import java.io.BufferedInputStream
@@ -37,10 +38,6 @@ import javax.sound.midi.Track
 
 object Analyzer extends App {
   val eventsFile = args(0)
-  /*
-  val outputFile = args(1)
-  val maxLength = 4
-  */
 
   def loadInstances(filename : String) : Analyzer = {
     val alphabet = Data.makeAlphabet
@@ -50,15 +47,6 @@ object Analyzer extends App {
   }
 
   val data = loadInstances(eventsFile)
-
-  /*
-  val trainer = new MaxEntTrainer()
-  val classifier = trainer.train(data.instanceList)
-
-  val ois = new ObjectOutputStream (new FileOutputStream(outputFile));
-  ois.writeObject(classifier)
-  ois.close();
-  */
 }
 
 class Analyzer(val alphabet : LabelAlphabet) {
@@ -69,16 +57,6 @@ class Analyzer(val alphabet : LabelAlphabet) {
   val bpm = raw"Info.*BPM (\d+)".r
   val instanceList = new InstanceList(alphabet, alphabet)
   val q = new Queue[Label]
-
-  abstract class NoteEvent {
-    val tick : Int
-    val note : Int
-  }
-  case class NoteOn(val tick : Int, val note : Int, val velocity : Int) extends NoteEvent
-  case class NoteOff(val tick : Int, val note : Int) extends NoteEvent
-  case class Skip(val tick : Int) extends NoteEvent {
-    val note = 0
-  }
 
   case class Song(var notes : ArrayBuffer[NoteEvent]) {
 
@@ -113,9 +91,19 @@ class Analyzer(val alphabet : LabelAlphabet) {
 
     def analyze = {
       var last = Array.fill[List[Long]](256)(Nil)
+      var numInMeasure = Array.fill[Int](256)(0)
+      var instrumentsInMeasure = Set.empty[Int]
       var time : Long = 0
+      var notesSincePulse : Int = 0
       for (i <- 0 until notes.size) {
         val note = notes(i)
+        if ((time+note.tick)/pulse > time/pulse) {
+          notesSincePulse = 0
+          for (i <- instrumentsInMeasure) {
+            numInMeasure(i) = 0
+          }
+          instrumentsInMeasure = Set.empty[Int]
+        }
         time += note.tick
         val tick = note.tick.toDouble
         val norm = ppq.toDouble
@@ -123,7 +111,7 @@ class Analyzer(val alphabet : LabelAlphabet) {
         var sinceLast : Long = 0
         var repetitions : Int = 0
 
-        last(note.note) match {
+        last(note.key) match {
           case Nil =>
             sinceLast = -ppq
             repetitions = 0
@@ -140,22 +128,26 @@ class Analyzer(val alphabet : LabelAlphabet) {
         note match {
           case on:NoteOn =>
             id = "+"
-            last(on.note) = time :: last(on.note)
+            last(on.key) = time :: last(on.key)
           case off:NoteOff =>
             id = "-"
           case s:Skip =>
             id = "/"
         }
+
         var onPulse = (time % pulse) < (beat / 8)
         val d = note.tick * 960 / ppq
         val l = sinceLast * 960L / ppq
         val b = (time % beat) * 960 / ppq
         if (id != "/") {
-          printf("%s K=%d D=%d L=%d P=%b B=%d R=%d\n", id, note.note, d, l, onPulse, b, repetitions)
+          printf("%s K=%d D=%d L=%d P=%b B=%d N=%d I=%d\n", id, note.key, d, l, onPulse, b, numInMeasure(note.key), instrumentsInMeasure.size)
         }
 
         note match {
-          case on:NoteOn =>
+          case on:NoteOn if (on.velocity > 0) =>
+            notesSincePulse += 1
+            numInMeasure(on.key) = numInMeasure(on.key) + 1
+            instrumentsInMeasure += on.key
           case _ => ()
         }
       }
