@@ -84,19 +84,37 @@ class Analyzer(val alphabet : LabelAlphabet) {
 
     def countElementsWithSameDifference(target : Long, last : Long, ts : List[Long]) : Int = {
       ts match {
-        case Nil => 0
-        case t::ts => if (math.abs(last-t-target) < (beat/8) ) { 1+countElementsWithSameDifference(target, t, ts) } else { 0 }
+        case t::ts if (math.abs(last-t-target) < (beat/8)) =>
+          1+countElementsWithSameDifference(target, t, ts)
+        case _ => 0
       }
     }
 
-    def analyze = {
+    case class Output(
+        val id : String,
+        val key : Int,
+        val deltaTime : Int,
+        val lastOccurrence :  Int,
+        val onPulse : Boolean,
+        val timeSinceBeat : Int,
+        val numThisKeyInMeasure : Int,
+        val numKeysInMeasure : Int) {
+      override def toString : String = {
+        return "%s K=%d D=%d L=%d P=%b B=%d N=%d I=%d".format(
+            id, key, deltaTime, lastOccurrence, onPulse, timeSinceBeat,
+            numThisKeyInMeasure, numKeysInMeasure)
+      }
+    }
+
+
+    class SongAnalyzer {
       var last = Array.fill[List[Long]](256)(Nil)
       var numInMeasure = Array.fill[Int](256)(0)
       var instrumentsInMeasure = Set.empty[Int]
       var time : Long = 0
       var notesSincePulse : Int = 0
-      for (i <- 0 until notes.size) {
-        val note = notes(i)
+
+      def analyze(note : NoteEvent) : Option[Output] = {
         if ((time+note.tick)/pulse > time/pulse) {
           notesSincePulse = 0
           for (i <- instrumentsInMeasure) {
@@ -139,8 +157,11 @@ class Analyzer(val alphabet : LabelAlphabet) {
         val d = note.tick * 960 / ppq
         val l = sinceLast * 960L / ppq
         val b = (time % beat) * 960 / ppq
+        var result = Option.empty[Output]
         if (id != "/") {
-          printf("%s K=%d D=%d L=%d P=%b B=%d N=%d I=%d\n", id, note.key, d, l, onPulse, b, numInMeasure(note.key), instrumentsInMeasure.size)
+          result = Some(Output(
+              id, note.key, d.toInt, l.toInt, onPulse, b.toInt,
+              numInMeasure(note.key), instrumentsInMeasure.size))
         }
 
         note match {
@@ -149,6 +170,16 @@ class Analyzer(val alphabet : LabelAlphabet) {
             numInMeasure(on.key) = numInMeasure(on.key) + 1
             instrumentsInMeasure += on.key
           case _ => ()
+        }
+        return result
+      }
+    }
+
+    def analyze = {
+      val songAnalyzer = new SongAnalyzer
+      for (note <- notes) {
+        for (output <- songAnalyzer.analyze(note)) {
+          printf("%s\n", output)
         }
       }
     }
