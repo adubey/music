@@ -5,6 +5,10 @@ import ca.dubey.music.midi.File
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
+import ca.dubey.music.midi.event.NoteEvent
+import ca.dubey.music.midi.event.NoteOn
+import ca.dubey.music.midi.event.NoteOff
+import ca.dubey.music.midi.event.Skip
 import cc.mallet.classify.ClassifierTrainer
 import cc.mallet.classify.MaxEntTrainer
 import cc.mallet.classify.MaxEnt
@@ -100,8 +104,15 @@ class Analyzer(val alphabet : LabelAlphabet) {
       pulse = beat * n
     }
 
+    def countElementsWithSameDifference(target : Long, last : Long, ts : List[Long]) : Int = {
+      ts match {
+        case Nil => 0
+        case t::ts => if (math.abs(last-t-target) < (beat/8) ) { 1+countElementsWithSameDifference(target, t, ts) } else { 0 }
+      }
+    }
+
     def analyze = {
-      var last = Array.fill[Long](256)(-1)
+      var last = Array.fill[List[Long]](256)(Nil)
       var time : Long = 0
       for (i <- 0 until notes.size) {
         val note = notes(i)
@@ -109,24 +120,38 @@ class Analyzer(val alphabet : LabelAlphabet) {
         val tick = note.tick.toDouble
         val norm = ppq.toDouble
 
-        var sinceLast = time - last(note.note)
-        if (sinceLast > pulse * 2 || last(note.note) == -1) {
-          sinceLast = -ppq
+        var sinceLast : Long = 0
+        var repetitions : Int = 0
+
+        last(note.note) match {
+          case Nil =>
+            sinceLast = -ppq
+            repetitions = 0
+          case t::ts if (t > pulse * 2) =>
+            sinceLast = -ppq
+            repetitions = 0
+          case t::ts =>
+            sinceLast = time - t
+            repetitions = countElementsWithSameDifference(sinceLast, t, ts)
         }
+
         var id = " "
 
         note match {
           case on:NoteOn =>
             id = "+"
-            last(on.note) = time
+            last(on.note) = time :: last(on.note)
           case off:NoteOff =>
             id = "-"
           case s:Skip =>
             id = "/"
         }
         var onPulse = (time % pulse) < (beat / 8)
+        val d = note.tick * 960 / ppq
+        val l = sinceLast * 960L / ppq
+        val b = (time % beat) * 960 / ppq
         if (id != "/") {
-          printf("%s K=%d D=%f L=%f P=%b B=%f\n", id, note.note, tick/norm, sinceLast/norm, onPulse, (time % beat)/norm)
+          printf("%s K=%d D=%d L=%d P=%b B=%d R=%d\n", id, note.note, d, l, onPulse, b, repetitions)
         }
 
         note match {

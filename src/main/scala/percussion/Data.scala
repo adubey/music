@@ -31,6 +31,17 @@ object Data {
 
   val noteLabel = raw"(\d+)_(\d+)_(\d+)".r
 
+  // Time since last note on same key, normalized to PPQ=960
+  val lastNoteQuantizer = Quantizer(
+      480, 240, 960, 1920, 120, 200, 20, 320, 160, 1440, -960, 60, 720, 0, 40, 80, 
+      3840, 32, 640, 30, 50, 192, 5, 100, 224, 472, 384, 2880, 128, 256, 110, 288, 96,
+      1200, 352, 150, 448, 90, 800, 2400, 64, 180, 140, 35)
+
+  val deltaQuantizer = Quantizer(320, 32, 80, 160, 200, 480, 120, 10, 240, 0, 960, 1140, 1840)
+
+  val beatQuantizer = Quantizer(
+      0, 480, 720, 240, 200, 640, 320, 120, 10, 800, 950, 160, 600, 500, 40, 840)
+
   def isKeyInRange(key : Int) = key > keyLow && key < keyHigh
 
   def normalizeTick(tick : Long, lastTick : Long, resolution : Int) : Int = {

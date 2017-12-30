@@ -6,6 +6,7 @@ import ca.dubey.music.midi.TrackBuilder
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
+import ca.dubey.music.midi.event.NoteOn
 import cc.mallet.classify.MaxEnt
 import cc.mallet.types.Alphabet
 import cc.mallet.types.Label
@@ -48,7 +49,7 @@ class Generator(
     val ticksPerBeat : Int,
     val beatsPerMinute : Int,
     val classifier : MaxEnt)
-    extends SequencePlayer with TrackBuilder {
+    extends SequencePlayer with TrackBuilder with MotifSampler {
 
   var maxLength = 4
   protected val sequence = new Sequence(Sequence.PPQ, ticksPerBeat)
@@ -77,114 +78,22 @@ class Generator(
     return Option.empty[Label]
   }
 
-  case class NoteEvent(val offset : Long, val note : Int, val velocity : Int) {
-    override def toString : String =
-      if (velocity > 0) { "N(%d,%d)".format(offset,note) } else ""
-  }
-
-  abstract class Motif {
-    var offset : Long
-    def end : Long
-    def realize(additionalOffset : Long = 0) : Unit
-  }
-
-  case class BaseMotif(val events : Array[NoteEvent], var offset : Long = 0) extends Motif {
-    override def end = events(events.size-1).offset + offset
-
-    override def clone : BaseMotif = BaseMotif(events, offset)
-
-    override def realize(additionalOffset : Long = 0) : Unit = {
-      for (note <- events) {
-        addNoteOn(t, note.note, note.offset + offset + additionalOffset, note.velocity)
-        printf("Realizing %d+%s\n", offset+additionalOffset, note)
-      }
-    }
-  }
-
-  case class ComposedMotif(
-      var motifs : ListBuffer[BaseMotif],
-      var offset : Long = 0) extends Motif {
-    override def end = if(motifs.isEmpty) { offset } else { motifs(motifs.size-1).end }
-
-    override def clone : ComposedMotif = {
-      ComposedMotif((motifs.map((m:BaseMotif) => m.clone)), offset)
-    }
-
-    override def realize(additionalOffset : Long = 0) : Unit = {
-      for (motif <- motifs) {
-        // This's offset should already be set via +=
-        motif.realize(additionalOffset)
-      }
-    }
-
-    def last : Option[BaseMotif] = motifs.isEmpty match {
-      case true => None
-      case false => Some(motifs(motifs.size-1))
-    }
-
-    def +=(add : Motif) : ComposedMotif = {
-      add match {
-        case b:BaseMotif =>
-          add.offset += end
-          motifs += b
-        case c:ComposedMotif =>
-          val cloned = c.motifs.map((m:BaseMotif) => m.clone)
-          for (motif <- cloned){
-            motif.offset += end
-          }
-          motifs ++= cloned
-      }
-      return this
-    }
-  }
 
   def buildFromMotifs = {
-    // Warm it up.
-    val start = buildMotif(20)
-    // This is the actual begining.
-    val a1 = buildMotif(1, Some(start))
-    val bases = Array(extendMotif(a1, 1), extendMotif(a1, 1), extendMotif(a1, 1), extendMotif(a1, 1))
-    var r = new util.Random
-
-    val motifs = ComposedMotif(ListBuffer.empty[BaseMotif])
-
-    for (i <- 1 to 20) {
-      if (i % 2 == 0) {
-        val j = r.nextInt(bases.size)
-
-        motifs += bases(j).clone
-      } else {
-        motifs += buildMotif(2, motifs.last)
-      }
-    }
-
+    val motifs = Motif.build(this)
     channel = 9
     addNameEvent(t, "some track")
     t.add(TempoEvent(beatsPerMinute).toMidiEvent)
-    motifs.realize(0)
+    motifs.realize((note:NoteOn) => addNoteOn(t, note.key, note.tick, note.velocity))
   }
 
-  def extendMotif(motif : Motif, numMeasures : Int) : ComposedMotif = {
-    motif match {
-      case b:BaseMotif =>
-        val next = buildMotif(numMeasures, Some(b))
-        val composed = ComposedMotif(ListBuffer.empty[BaseMotif])
-        composed += b.clone
-        composed += next
-        return composed
-      case c:ComposedMotif =>
-        c += buildMotif(numMeasures, c.last)
-        return c
-    }
-  }
- 
-  def buildMotif(numMeasures : Int, prev : Option[BaseMotif] = None)  : BaseMotif = {
+  def sampleMotif(numMeasures : Int, prev : Option[BaseMotif] = None)  : BaseMotif = {
     channel = 9
     var time = 0L
     val q = new Queue[Label]
     val r = new util.Random
     val maxTime = ticksPerBeat * 4 * numMeasures - ticksPerBeat
-    val motif = Array.newBuilder[NoteEvent]
+    val motif = Array.newBuilder[NoteOn]
 
     while (q.size < maxLength) {
       q += alphabet.lookupLabel("START")
@@ -196,9 +105,9 @@ class Generator(
       // This has a timing bug if p.size > q.size
       for (i <- math.max(0, windowStart - 1) until q.size) {
         val event = p.events(i)
-        q += alphabet.lookupLabel(Data.encode(alphabet, (event.offset - offset).toInt, event.note, event.velocity))
+        q += alphabet.lookupLabel(Data.encode(alphabet, (event.tick - offset).toInt, event.key, event.velocity))
         q.dequeue
-        offset = event.offset
+        offset = event.tick
       }
     }
 
@@ -206,17 +115,17 @@ class Generator(
       sampleNextNote(r, q) match {
         case None =>
           // Try again
-          return buildMotif(numMeasures)
+          return sampleMotif(numMeasures)
           
         case Some(label) =>
           val (tick, note, velocity) = Data.decode(label)
           if (tick == 0 && note == 0 && velocity == 0) {
             printf("Stopped early: %s\n", label)
             // Try again
-            return buildMotif(numMeasures)
+            return sampleMotif(numMeasures)
           }
           time += Data.unnormalizeTick(tick, ticksPerBeat)
-          motif += NoteEvent(time, note, velocity)
+          motif += NoteOn(time, note, velocity)
           q += label
           q.dequeue
       }
