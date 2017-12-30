@@ -101,14 +101,18 @@ class Analyzer(val alphabet : LabelAlphabet) {
     }
 
     def analyze = {
-      var last = Array.fill[Long](256)(0)
+      var last = Array.fill[Long](256)(-1)
       var time : Long = 0
       for (i <- 0 until notes.size) {
         val note = notes(i)
-        val tick = Data.unnormalizeTick(note.tick, ppq)
-        time += tick
+        time += note.tick
+        val tick = note.tick.toDouble
+        val norm = ppq.toDouble
 
         var sinceLast = time - last(note.note)
+        if (sinceLast > pulse * 2 || last(note.note) == -1) {
+          sinceLast = -ppq
+        }
         var id = " "
 
         note match {
@@ -122,7 +126,7 @@ class Analyzer(val alphabet : LabelAlphabet) {
         }
         var onPulse = (time % pulse) < (beat / 8)
         if (id != "/") {
-          printf("%s K=%d D=%d L=%d P=%b B=%d\n", id, note.note, tick, sinceLast, onPulse, time % beat)
+          printf("%s K=%d D=%f L=%f P=%b B=%f\n", id, note.note, tick/norm, sinceLast/norm, onPulse, (time % beat)/norm)
         }
 
         note match {
@@ -143,13 +147,6 @@ class Analyzer(val alphabet : LabelAlphabet) {
 
     for (lineRaw <- Source.fromFile(filename).getLines) {
       numLines += 1
-      if (numLines % 50000 == 0) {
-        printf("At %d\n", numLines)
-      }
-      if (numLines % 2000000 == 0) {
-        printf("%d songs, %d skipped, %d empty\n", numSongs, numSkipped, numEmpty)
-        return
-      }
       val line = lineRaw.trim
       if (line.startsWith("Song")) {
         numSongs += 1
@@ -186,13 +183,12 @@ class Analyzer(val alphabet : LabelAlphabet) {
               } else {
                 currentSong.setPpq(y.toInt)
               }
-            case timeSignature(n, logD) =>
-              val d = math.pow(2,logD.toInt).toInt
-              if (d != 4 && d != 8) {
+            case timeSignature(n, d) =>
+              if (d != "4" && d != "8") {
                 skipSong = true
                 numSkipped += 1
               } else {
-                currentSong.setTimeSignature(n.toInt, d)
+                currentSong.setTimeSignature(n.toInt, d.toInt)
               }
             case _ =>  ()
           }
