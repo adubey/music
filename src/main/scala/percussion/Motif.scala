@@ -2,7 +2,9 @@ package ca.dubey.music.percussion
 
 import collection.mutable.ListBuffer
 import ca.dubey.music.midi.event.NoteEvent
+import ca.dubey.music.midi.event.NoteOff
 import ca.dubey.music.midi.event.NoteOn
+import ca.dubey.music.midi.event.Skip
 
 trait MotifSampler {
   def sampleMotif(numMeasures : Int, prev : Option[BaseMotif] = None)  : BaseMotif
@@ -15,6 +17,7 @@ object Motif {
     val start = sampler.sampleMotif(20, None)
     // This is the actual begining.
     val a1 = sampler.sampleMotif(1, Some(start))
+    printf("Base motifs")
     val bases = Array(
       extendMotif(a1, 1, sampler),
       extendMotif(a1, 1, sampler),
@@ -58,10 +61,10 @@ abstract class Motif {
   def realize(realizer : (NoteEvent)=>Unit, additionalOffset : Long = 0) : Unit
 }
 
-case class BaseMotif(val events : Array[NoteEvent], var offset : Long = 0) extends Motif {
+case class BaseMotif(val events : Array[NoteEvent], var offset : Long = 0, var history : History = null) extends Motif {
   override def end = events(events.size-1).tick + offset
 
-  override def clone : BaseMotif = BaseMotif(events, offset)
+  override def clone : BaseMotif = BaseMotif(events, offset, history)
 
   override def realize(realizer : (NoteEvent)=>Unit, additionalOffset : Long = 0) : Unit = {
     for (note <- events) {
@@ -69,16 +72,21 @@ case class BaseMotif(val events : Array[NoteEvent], var offset : Long = 0) exten
         case on:NoteOn =>
           realizer(NoteOn(note.tick + offset + additionalOffset, note.key, on.velocity))
           printf("Realizing %d+%s\n", offset+additionalOffset, note)
+        case off:NoteOff =>
+          realizer(NoteOff(note.tick + offset + additionalOffset, note.key))
+        case _ => () // ?
       }
     }
   }
 
+  /*
   def analyzer : Analyzer.Song = {
     val s = Analyzer.Song(events)
     s.setPpq(960)
     s.setTimeSignature(4,4)
     return s
   }
+  */
 }
 
 case class ComposedMotif(

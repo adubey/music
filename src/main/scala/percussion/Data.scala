@@ -1,6 +1,9 @@
 package ca.dubey.music.percussion
 
 import ca.dubey.music.learn.Quantizer
+import ca.dubey.music.midi.event.NoteEvent
+import ca.dubey.music.midi.event.NoteOff
+import ca.dubey.music.midi.event.NoteOn
 import cc.mallet.types.Alphabet
 import cc.mallet.types.Label
 import cc.mallet.types.LabelAlphabet
@@ -28,8 +31,11 @@ object Data {
   val keyHigh = 82
   /** The range of keys is actually 33 to 81, but leave a low and high for unknown keys */
   val keyQuantizer = Quantizer(keyLow to keyHigh : _*)
+  val historySize = 3
 
   val noteLabel = raw"(\d+)_(\d+)_(\d+)".r
+  val noteOnEvent = raw"\+ (\d+) (-?\d+) (\d+)".r
+  val noteOffEvent = raw"- (\d+) (-?\d+) (\d+)".r
 
   // Time since last note on same key, normalized to PPQ=960
   val lastNoteQuantizer = Quantizer(
@@ -45,6 +51,20 @@ object Data {
   val ids = Array("+", "-")
 
   def isKeyInRange(key : Int) = key > keyLow && key < keyHigh
+
+  def quantizeTick(deltaTick : Long, resolution : Int) : Int = {
+    lastNoteQuantizer.quantize((deltaTick * 960 / resolution).toInt)
+  }
+
+  def noteEventToString(n : NoteEvent, addTime : Long, position : Int, ppq : Int) : String = n match {
+    case NoteOn(tick, key, velocity) =>
+      "+ %d %d %d".format(position, quantizeTick(tick+addTime, ppq), key)
+    case NoteOff(tick, key) =>
+      "- %d %d %d".format(position, quantizeTick(tick+addTime, ppq), key)
+    case _ => 
+      "STARTSTOP %d".format(position)
+  }
+
 
   def normalizeTick(tick : Long, lastTick : Long, resolution : Int) : Int = {
     (0.5 + 96.0 * (tick - lastTick) / resolution.toFloat).toInt
@@ -67,12 +87,13 @@ object Data {
     encode(alphabet, tick.toInt, key.toInt, velocity.toInt, false)
   }
 
-  def decode(label : Label) : (Int, Int, Int) = {
+  def decode(label : Label) : (String, Int, Int) = {
     val s = label.getEntry.asInstanceOf[String]
 
     s match {
-      case noteLabel(tick, key, velocity) => return (tick.toInt, key.toInt, velocity.toInt)
-      case _ => return (0, 0, 0)
+      case noteOnEvent(_, tick, key) => return ("+", tick.toInt, key.toInt)
+      case noteOffEvent(_, tick, key) => return ("-", tick.toInt, key.toInt)
+      case _ => return ("/", 0, 0)
     }
   }
 

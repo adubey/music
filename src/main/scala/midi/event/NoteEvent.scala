@@ -18,5 +18,5 @@ case class NoteOff(val tick : Long, val key : Int) extends NoteEvent {
 
 case class Skip(val tick : Long) extends NoteEvent {
   val key = 0
-  val id : Strig = "/"
+  val id : String = "/"
 }

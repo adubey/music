@@ -7,7 +7,9 @@ import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
 import ca.dubey.music.midi.event.NoteEvent
+import ca.dubey.music.midi.event.NoteOff
 import ca.dubey.music.midi.event.NoteOn
+import ca.dubey.music.midi.event.Skip
 import cc.mallet.classify.MaxEnt
 import cc.mallet.types.Alphabet
 import cc.mallet.types.Label
@@ -31,7 +33,8 @@ import javax.sound.midi.Track
 
 object Generator extends App {
   val modelFilename = args(0)
-  val TICKS_PER_BEAT = 24
+  val TICKS_PER_BEAT = 960
+
   val sequencer = MidiSystem.getSequencer
   sequencer.open
 
@@ -39,8 +42,10 @@ object Generator extends App {
   val classifier = ois.readObject.asInstanceOf[MaxEnt]
   ois.close
 
-  val builder = new Generator(TICKS_PER_BEAT, 120, classifier)
+  val builder = new Generator(TICKS_PER_BEAT, 200, classifier)
   builder.buildFromMotifs
+
+  printf("Playing\n")
   builder.play(sequencer)
 
   System.exit(0)
@@ -56,10 +61,10 @@ class Generator(
   protected val sequence = new Sequence(Sequence.PPQ, ticksPerBeat)
   protected val t = sequence.createTrack
   private val alphabet : LabelAlphabet = classifier.getAlphabet.asInstanceOf[LabelAlphabet]
+  private val targetAlphabet : LabelAlphabet = classifier.getLabelAlphabet.asInstanceOf[LabelAlphabet]
 
-  def sampleNextNote(r : util.Random, q : Queue[Label]) : Option[Label] = {
-    val vector = new FeatureVector(alphabet, q.map((x:Label) => x.getIndex).toArray)
-    val instance = new Instance(vector, null, "", "")
+  def sampleNextNote(r : util.Random, h : History) : Option[Label] = {
+    val instance = new Instance(h.featureVector, null, "", "")
     val classification = classifier.classify(instance)
     val labeling = classification.getLabeling
     var p = 0D
@@ -67,7 +72,7 @@ class Generator(
     for (j <- 0 until alphabet.size) {
       p += labeling.getValueAtRank(j)
       val label = labeling.getLabelAtRank(j)
-      // val string = alphabet.lookupObject(label.getIndex).asInstanceOf[String]
+      val string = targetAlphabet.lookupObject(label.getIndex).asInstanceOf[String]
       val s1 = label.getEntry.asInstanceOf[String]
       val s2 = alphabet.lookupObject(label.getIndex).asInstanceOf[String]
       if (p >= targetProb) {
@@ -85,91 +90,45 @@ class Generator(
     channel = 9
     addNameEvent(t, "some track")
     t.add(TempoEvent(beatsPerMinute).toMidiEvent)
+    printf("Realzing\n")
     motifs.realize((addNoteEvent _).curried(t))
   }
 
   def sampleMotif(numMeasures : Int, prev : Option[BaseMotif] = None)  : BaseMotif = {
     channel = 9
     var time = 0L
-    val q = new Queue[Label]
+    val history =
+      prev match {
+        case Some(BaseMotif(_,_,_)) => prev.get.history.clone
+        case None => new History(Data.historySize, alphabet, Generator.TICKS_PER_BEAT)
+      }
     val r = new util.Random
     val maxTime = ticksPerBeat * 4 * numMeasures - ticksPerBeat
     val motif = Array.newBuilder[NoteEvent]
 
-    while (q.size < maxLength) {
-      q += alphabet.lookupLabel("START")
-    }
-
-    for (p <- prev) {
-      val windowStart = p.events.size - q.size
-      var offset = 0L
-      // This has a timing bug if p.size > q.size
-      for (i <- math.max(0, windowStart - 1) until q.size) {
-        val event = p.events(i)
-        event match {
-          case on:NoteOn =>
-            q += alphabet.lookupLabel(
-                Data.encode(alphabet, (event.tick - offset).toInt,
-                event.key, on.velocity))
-            q.dequeue
-            offset = event.tick
-          case _ => ()
-        }
-      }
-    }
-
     while(time < maxTime) {
-      sampleNextNote(r, q) match {
+      sampleNextNote(r, history) match {
         case None =>
           // Try again
-          return sampleMotif(numMeasures)
+          return sampleMotif(numMeasures, prev)
           
         case Some(label) =>
-          val (tick, note, velocity) = Data.decode(label)
-          if (tick == 0 && note == 0 && velocity == 0) {
-            printf("Stopped early: %s\n", label)
-            // Try again
-            return sampleMotif(numMeasures)
+          val (onoff, tick, key) = Data.decode(label)
+          printf("\tNote: %s\n", label)
+          if (tick >= 0) {
+            printf("\t\tAdding: %d %d\n", tick, key)
+            time += tick
+            val event = onoff match {
+              case "+" => NoteOn(time, key, 100)
+              case "-" => NoteOff(time, key)
+              case "/" => Skip(time)
+            }
+            motif += event
+            history += event
           }
-          time += Data.unnormalizeTick(tick, ticksPerBeat)
-          motif += NoteOn(time, note, velocity)
-          q += label
-          q.dequeue
       }
     }
 
-    return BaseMotif(motif.result)
-  }
-
-
-  def build : Track = {
-    channel = 9
-    addNameEvent(t, "some track")
-    val q = new Queue[Label]
-    val r = new util.Random
-    var time = 0L
-
-    while (q.size < maxLength) {
-      q += alphabet.lookupLabel("START")
-    }
-
-    for (i <- 1 to 500) {
-      sampleNextNote(r, q) match {
-        case None => return t
-        case Some(label) =>
-          val (tick, note, velocity) = Data.decode(label)
-          if (tick == 0 && note == 0 && velocity == 0) {
-            printf("Stopped early: %s\n", label)
-            return t
-          }
-          time += Data.unnormalizeTick(tick, ticksPerBeat)
-          addNoteOn(t, note, time, velocity)
-          q += label
-          q.dequeue
-      }
-
-    }
-
-    return t
+    return BaseMotif(motif.result, 0, history)
   }
 }

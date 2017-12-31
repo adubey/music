@@ -57,6 +57,7 @@ trait TrackBuilder {
   }
 
   protected def addNoteEvent(t : Track, noteEvent : NoteEvent) : Unit = {
+    printf("Adding note event: %d %d\n", noteEvent.key, noteEvent.tick)
     noteEvent match {
       case on:NoteOn => addNoteOn(t, on.key, on.tick, on.velocity)
       case on:NoteOff => addNoteOff(t, on.key, on.tick)
