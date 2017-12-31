@@ -4,3 +4,4 @@ target
 data
 lib
 project/target
+src/main/scala/scratch
