@@ -6,6 +6,7 @@ import ca.dubey.music.midi.TrackBuilder
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.NoteEvent
 import ca.dubey.music.midi.event.NoteOn
+import ca.dubey.music.midi.event.NoteOff
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
 import cc.mallet.classify.MaxEnt
@@ -57,14 +58,23 @@ class Generator2(
   private val dataAlphabet : LabelAlphabet = classifier.getAlphabet.asInstanceOf[LabelAlphabet]
   private val targetAlphabet : LabelAlphabet = classifier.getLabelAlphabet.asInstanceOf[LabelAlphabet]
 
-  def sampleNextNote(r : util.Random, q : Queue[Label]) : Option[Label] = {
+  def sampleNextNote(r : util.Random, song : Analyzer.Song.SongAnalyzer) : Option[Label] = {
+      val time : Long = 0
+      for (key <- Data.keyLow to Data.keyHigh) {
+        for (delta -> Data.deltaQuantizer) {
+          val noteOn = NoteOn(time + delta, key, 60)
+          val noteOff = NoteOff(time + delta, key)
+        }
+      }
+    }
+    val output = song.analyzeWithoutAdvancing
     val vector = new FeatureVector(dataAlphabet, q.map((x:Label) => x.getIndex).toArray)
     val instance = new Instance(vector, null, "", "")
     val classification = classifier.classify(instance)
     val labeling = classification.getLabeling
     var p = 0D
     val targetProb = r.nextDouble
-    for (j <- 0 until dataAlphabet.size) {
+    for (j <- 0 until targetAlphabet.size) {
       p += labeling.getValueAtRank(j)
       val label = labeling.getLabelAtRank(j)
       // val string = dataAlphabet.lookupObject(label.getIndex).asInstanceOf[String]
@@ -85,16 +95,17 @@ class Generator2(
     channel = 9
     addNameEvent(t, "some track")
     t.add(TempoEvent(beatsPerMinute).toMidiEvent)
-    motifs.realize((note:NoteOn) => addNoteOn(t, note.key, note.tick, note.velocity))
+    // motifs.realize((note:NoteOn) => addNoteOn(t, note.key, note.tick, note.velocity))
   }
 
   def sampleMotif(numMeasures : Int, prev : Option[BaseMotif] = None)  : BaseMotif = {
+    val analyzer = new Analyzer
     channel = 9
     var time = 0L
     val q = new Queue[Label]
     val r = new util.Random
     val maxTime = ticksPerBeat * 4 * numMeasures - ticksPerBeat
-    val motif = Array.newBuilder[NoteOn]
+    val motif = Array.newBuilder[NoteEvent]
 
     for (p <- prev) {
       val windowStart = p.events.size - q.size
@@ -102,7 +113,7 @@ class Generator2(
       // This has a timing bug if p.size > q.size
       for (i <- math.max(0, windowStart - 1) until q.size) {
         val event = p.events(i)
-        q += dataAlphabet.lookupLabel(Data.encode(dataAlphabet, (event.tick - offset).toInt, event.key, event.velocity))
+        // q += dataAlphabet.lookupLabel(Data.encode(dataAlphabet, (event.tick - offset).toInt, event.key, event.velocity))
         q.dequeue
         offset = event.tick
       }

@@ -53,7 +53,6 @@ object Train2 extends App {
 }
 
 class Train2(val dataAlphabet : LabelAlphabet, val targetAlphabet : LabelAlphabet) {
-  val event = raw"([+-]) K=(\d+) D=(\d+) L=(-?\d+) P=(\w+) B=(\d+)".r
   val instanceList = new InstanceList(dataAlphabet, targetAlphabet)
 
   def loadInstances(filename : String) : Unit = {
@@ -66,25 +65,8 @@ class Train2(val dataAlphabet : LabelAlphabet, val targetAlphabet : LabelAlphabe
       if (numLines % 200000 == 0) {
         return
       }
-      line.trim match {
-        case event(eventType, key, deltaString, lastString, pulse, beatString) =>
-          val delta = Data.deltaQuantizer.quantize(deltaString.toInt)
-          val last = Data.lastNoteQuantizer.quantize(lastString.toInt)
-          val beat = Data.beatQuantizer.quantize(beatString.toInt)
-
-          val target = targetAlphabet.lookupLabel("%s_%d".format(key, delta))
-          val lastLabel = dataAlphabet.lookupLabel("L_%s".format(last))
-          val beatLabel = dataAlphabet.lookupLabel("B_%s".format(beat))
-          val pulseLabel = dataAlphabet.lookupLabel(pulse)
-
-          val vector = new FeatureVector(dataAlphabet, Array(lastLabel.getIndex, beatLabel.getIndex, pulseLabel.getIndex))
-          val instance = new Instance(vector, target, "", "")
-          instanceList.add(instance)
-
-        case _ =>
-          printf("Line didn't match: %s\n", line)
-      }
-
+      val output = Analyzer.Output.fromString(line.trim)
+      instanceList.add(output.encode(dataAlphabet, targetAlphabet))
     }
   }
 

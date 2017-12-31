@@ -35,8 +35,7 @@ object Train extends App {
   val maxLength = 4
 
   def loadInstances(filename : String) : Train = {
-    val alphabet = Data.makeAlphabet
-    val data = new Train(Data.makeAlphabet, maxLength)
+    val data = new Train(new LabelAlphabet, new LabelAlphabet)
     data.loadInstances(filename)
     data
   }
@@ -49,19 +48,32 @@ object Train extends App {
   val ois = new ObjectOutputStream (new FileOutputStream(outputFile));
   ois.writeObject(classifier)
   ois.close();
+
+  class History(val size : Int, val alphabet : Alphabet) {
+    val contents = Array.fill(size)("START")
+
+    def +=(data : String) = {
+      for (i <- 1 until size) {
+        contents(i) = contents(i-1)
+      }
+      contents(0) = data
+    }
+
+    def featureVector : FeatureVector = {
+      val d = Array.fill(size)(0)
+      for (i <- 0 until size) {
+        d(i) = alphabet.lookupLabel("%d_%s".format(i, contents(i))).getIndex
+      }
+      return new FeatureVector(alphabet, d)
+    }
+  }
 }
 
-class Train(val alphabet : LabelAlphabet, val maxLength : Int) {
+class Train(val alphabet : LabelAlphabet, val targetAlphabet : LabelAlphabet, val maxLength : Int) {
   val noteOnEvent = raw"\+ (\d+) (\d+) (\d+)".r
   val noteOffEvent = raw"- (\d+) (\d+)".r
   val instanceList = new InstanceList(alphabet, alphabet)
-  val q = new Queue[Label]
-
-  def fillQueue(label : String) : Unit = {
-    while (q.size < maxLength) {
-      q += alphabet.lookupLabel(label)
-    }
-  }
+  val h = new History(maxLength, alphabet)
 
   def nextTrainingExample(s : String) : Unit = {
     nextTrainingExample(alphabet.lookupLabel(s))
@@ -100,11 +112,8 @@ class Train(val alphabet : LabelAlphabet, val maxLength : Int) {
         // Add a STOP
         if (anyNotes) {
           nextTrainingExample("STOP")
-          // Fill with START
-          for (i <- 1 to maxLength) {
-            q += alphabet.lookupLabel("START")
-            q.dequeue
-          }
+          // Reset.
+          h = new History(maxLength, alphabet)
           anyNotes = false
         }
       } else if (!line.startsWith("Info")) {
@@ -112,7 +121,57 @@ class Train(val alphabet : LabelAlphabet, val maxLength : Int) {
         anyNotes = true
       }
     }
+    for (lineRaw <- Source.fromFile(filename).getLines) {
+      numLines += 1
+      val line = lineRaw.trim
+      if (line.startsWith("Song")) {
+        numSongs += 1
+        if (!skipSong) {
+          if (notes.isEmpty) {
+            numEmpty += 1
+          } else {
+            currentSong.analyze
+          }
+        }
+        skipSong = false
+        notes = ArrayBuffer.empty[NoteEvent]
+        currentSong = Analyzer.Song(notes)
+      } else {
+        if (!skipSong) {
+          line match {
+            case noteOnEvent(tick, note, velocity) =>
+              val n = note.toInt
+              if (Data.isKeyInRange(n)) {
+                notes += NoteOn(tick.toInt, n, velocity.toInt)
+              } else {
+                notes += Skip(tick.toInt)
+              }
+            case noteOffEvent(tick, note) =>
+              val n = note.toInt
+              if (Data.isKeyInRange(n)) {
+                notes += NoteOff(tick.toInt, n)
+              } else {
+                notes += Skip(tick.toInt)
+              }
+            case timing(x, y) =>
+              if (x.toFloat != 0.0) {
+                skipSong = true
+                numSkipped += 1
+              } else {
+                currentSong.setPpq(y.toInt)
+              }
+            case timeSignature(n, d) =>
+              if (d != "4" && d != "8") {
+                skipSong = true
+                numSkipped += 1
+              } else {
+                currentSong.setTimeSignature(n.toInt, d.toInt)
+              }
+            case _ =>  ()
+          }
+        }
+      }
+    }
   }
-
 }
 

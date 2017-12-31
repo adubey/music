@@ -42,6 +42,8 @@ object Data {
   val beatQuantizer = Quantizer(
       0, 480, 720, 240, 200, 640, 320, 120, 10, 800, 950, 160, 600, 500, 40, 840)
 
+  val ids = Array("+", "-")
+
   def isKeyInRange(key : Int) = key > keyLow && key < keyHigh
 
   def normalizeTick(tick : Long, lastTick : Long, resolution : Int) : Int = {

@@ -1,6 +1,9 @@
 package ca.dubey.music.midi
 
 import ca.dubey.music.midi.event.TempoEvent
+import ca.dubey.music.midi.event.NoteEvent
+import ca.dubey.music.midi.event.NoteOff
+import ca.dubey.music.midi.event.NoteOn
 import javax.sound.midi.Sequence
 import javax.sound.midi.Sequencer
 import javax.sound.midi.Track
@@ -51,5 +54,13 @@ trait TrackBuilder {
 
   protected def addNoteOff(t : Track, key : Int, time : Long) : Unit = {
     t.add(new MidiEvent(new ShortMessage(ShortMessage.NOTE_OFF, channel, key, 0), time))
+  }
+
+  protected def addNoteEvent(t : Track, noteEvent : NoteEvent) : Unit = {
+    noteEvent match {
+      case on:NoteOn => addNoteOn(t, on.key, on.tick, on.velocity)
+      case on:NoteOff => addNoteOff(t, on.key, on.tick)
+      case _ => ()
+    }
   }
 }

@@ -6,6 +6,7 @@ import ca.dubey.music.midi.TrackBuilder
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
+import ca.dubey.music.midi.event.NoteEvent
 import ca.dubey.music.midi.event.NoteOn
 import cc.mallet.classify.MaxEnt
 import cc.mallet.types.Alphabet
@@ -84,7 +85,7 @@ class Generator(
     channel = 9
     addNameEvent(t, "some track")
     t.add(TempoEvent(beatsPerMinute).toMidiEvent)
-    motifs.realize((note:NoteOn) => addNoteOn(t, note.key, note.tick, note.velocity))
+    motifs.realize((addNoteEvent _).curried(t))
   }
 
   def sampleMotif(numMeasures : Int, prev : Option[BaseMotif] = None)  : BaseMotif = {
@@ -93,7 +94,7 @@ class Generator(
     val q = new Queue[Label]
     val r = new util.Random
     val maxTime = ticksPerBeat * 4 * numMeasures - ticksPerBeat
-    val motif = Array.newBuilder[NoteOn]
+    val motif = Array.newBuilder[NoteEvent]
 
     while (q.size < maxLength) {
       q += alphabet.lookupLabel("START")
@@ -105,9 +106,15 @@ class Generator(
       // This has a timing bug if p.size > q.size
       for (i <- math.max(0, windowStart - 1) until q.size) {
         val event = p.events(i)
-        q += alphabet.lookupLabel(Data.encode(alphabet, (event.tick - offset).toInt, event.key, event.velocity))
-        q.dequeue
-        offset = event.tick
+        event match {
+          case on:NoteOn =>
+            q += alphabet.lookupLabel(
+                Data.encode(alphabet, (event.tick - offset).toInt,
+                event.key, on.velocity))
+            q.dequeue
+            offset = event.tick
+          case _ => ()
+        }
       }
     }
 

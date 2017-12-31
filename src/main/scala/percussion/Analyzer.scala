@@ -19,6 +19,7 @@ import cc.mallet.types.InstanceList
 import cc.mallet.types.Label
 import cc.mallet.types.LabelAlphabet
 import collection.mutable.ArrayBuffer
+import collection.mutable.IndexedSeq
 import collection.mutable.ListBuffer
 import collection.mutable.Set
 import collection.mutable.Queue
@@ -40,25 +41,72 @@ object Analyzer extends App {
   val eventsFile = args(0)
 
   def loadInstances(filename : String) : Analyzer = {
-    val alphabet = Data.makeAlphabet
-    val data = new Analyzer(Data.makeAlphabet)
+    val data = new Analyzer
     data.loadInstances(filename)
     data
   }
 
   val data = loadInstances(eventsFile)
-}
 
-class Analyzer(val alphabet : LabelAlphabet) {
-  val noteOnEvent = raw"\+ (\d+) (\d+) (\d+)".r
-  val noteOffEvent = raw"- (\d+) (\d+)".r
-  val timeSignature = raw"Info.*Time Signature (\d+) / (\d+)".r
-  val timing = raw"Info Timing ([\.\d]+) (\d+)".r
-  val bpm = raw"Info.*BPM (\d+)".r
-  val instanceList = new InstanceList(alphabet, alphabet)
-  val q = new Queue[Label]
+  object Output {
+    val eventOld = raw"([+-]) K=(\d+) D=(\d+) L=(-?\d+) P=(\w+) B=(\d+)".r
+    val eventNew = raw"([+-]) K=(\d+) D=(\d+) L=(-?\d+) P=(\w+) B=(\d+) N=(\d+) I=(\d+)".r
 
-  case class Song(var notes : ArrayBuffer[NoteEvent]) {
+    def fromString(s : String) = {
+      s match {
+        case eventOld(eventType, key, deltaString, lastString, pulse, beatString) =>
+          Output(
+              eventType, key.toInt, deltaString.toInt, lastString.toInt,
+              pulse match { case "true" => true case _ => false },
+              beatString.toInt, 0, 0)
+        case eventNew(eventType, key, deltaString, lastString, pulse, beatString, n, i) =>
+          Output(
+              eventType, key.toInt, deltaString.toInt, lastString.toInt,
+              pulse match { case "true" => true case _ => false },
+              beatString.toInt, n.toInt, i.toInt)
+      }
+    }
+  }
+
+  case class Output(
+      val id : String,
+      val key : Int,
+      val deltaTime : Int,
+      val lastOccurrence :  Int,
+      val onPulse : Boolean,
+      val timeSinceBeat : Int,
+      val numThisKeyInMeasure : Int,
+      val numKeysInMeasure : Int) {
+
+    override def toString : String = {
+      return "%s K=%d D=%d L=%d P=%b B=%d N=%d I=%d".format(
+          id, key, deltaTime, lastOccurrence, onPulse, timeSinceBeat,
+          numThisKeyInMeasure, numKeysInMeasure)
+    }
+
+    def encode(dataAlphabet : LabelAlphabet, targetAlphabet : LabelAlphabet) : Instance = {
+      val delta = Data.deltaQuantizer.quantize(deltaTime)
+      val last = Data.lastNoteQuantizer.quantize(lastOccurrence)
+      val beat = Data.beatQuantizer.quantize(timeSinceBeat)
+
+      val lastLabel =
+          dataAlphabet.lookupLabel("L_%s".format(last))
+      val beatLabel =
+          dataAlphabet.lookupLabel("B_%s".format(beat))
+      val pulseLabel =
+          dataAlphabet.lookupLabel(onPulse.toString)
+
+      return new Instance(
+          new FeatureVector(
+              dataAlphabet,
+              Array(lastLabel.getIndex, beatLabel.getIndex, pulseLabel.getIndex)),
+          targetAlphabet.lookupLabel("%s_%d_%d".format(id, key, delta)),
+          "",
+          "")
+    }
+  }
+
+  case class Song(var notes : IndexedSeq[NoteEvent]) {
 
     var ppq : Int = 24
     var n : Int = 4
@@ -82,47 +130,22 @@ class Analyzer(val alphabet : LabelAlphabet) {
       pulse = beat * n
     }
 
-    def countElementsWithSameDifference(target : Long, last : Long, ts : List[Long]) : Int = {
-      ts match {
-        case t::ts if (math.abs(last-t-target) < (beat/8)) =>
-          1+countElementsWithSameDifference(target, t, ts)
-        case _ => 0
-      }
-    }
-
-    case class Output(
-        val id : String,
-        val key : Int,
-        val deltaTime : Int,
-        val lastOccurrence :  Int,
-        val onPulse : Boolean,
-        val timeSinceBeat : Int,
-        val numThisKeyInMeasure : Int,
-        val numKeysInMeasure : Int) {
-      override def toString : String = {
-        return "%s K=%d D=%d L=%d P=%b B=%d N=%d I=%d".format(
-            id, key, deltaTime, lastOccurrence, onPulse, timeSinceBeat,
-            numThisKeyInMeasure, numKeysInMeasure)
-      }
-    }
-
-
     class SongAnalyzer {
-      var last = Array.fill[List[Long]](256)(Nil)
+      var last = Array.fill[Long](-ppq)(Nil)
       var numInMeasure = Array.fill[Int](256)(0)
       var instrumentsInMeasure = Set.empty[Int]
       var time : Long = 0
       var notesSincePulse : Int = 0
 
-      def analyze(note : NoteEvent) : Option[Output] = {
-        if ((time+note.tick)/pulse > time/pulse) {
+      def analyzeWithoutAdvancing(note : NoteEvent) : Option[Output] = {
+        val newTime = time + note.tick
+        if (newTime/pulse > time/pulse) {
           notesSincePulse = 0
           for (i <- instrumentsInMeasure) {
             numInMeasure(i) = 0
           }
           instrumentsInMeasure = Set.empty[Int]
         }
-        time += note.tick
         val tick = note.tick.toDouble
         val norm = ppq.toDouble
 
@@ -137,40 +160,37 @@ class Analyzer(val alphabet : LabelAlphabet) {
             sinceLast = -ppq
             repetitions = 0
           case t::ts =>
-            sinceLast = time - t
+            sinceLast = newTime - t
             repetitions = countElementsWithSameDifference(sinceLast, t, ts)
         }
 
-        var id = " "
-
-        note match {
-          case on:NoteOn =>
-            id = "+"
-            last(on.key) = time :: last(on.key)
-          case off:NoteOff =>
-            id = "-"
-          case s:Skip =>
-            id = "/"
-        }
-
-        var onPulse = (time % pulse) < (beat / 8)
+        var onPulse = (newTime % pulse) < (beat / 8)
         val d = note.tick * 960 / ppq
         val l = sinceLast * 960L / ppq
-        val b = (time % beat) * 960 / ppq
+        val b = (newTime % beat) * 960 / ppq
         var result = Option.empty[Output]
-        if (id != "/") {
+        if (note.id != "/") {
           result = Some(Output(
-              id, note.key, d.toInt, l.toInt, onPulse, b.toInt,
+              note.id, note.key, d.toInt, l.toInt, onPulse, b.toInt,
               numInMeasure(note.key), instrumentsInMeasure.size))
         }
+        return result
+      }
 
+      def advance(note : NoteEvent) = {
         note match {
           case on:NoteOn if (on.velocity > 0) =>
+            last(on.key) = time :: last(on.key)
             notesSincePulse += 1
             numInMeasure(on.key) = numInMeasure(on.key) + 1
             instrumentsInMeasure += on.key
           case _ => ()
         }
+      }
+
+      def analyze(note : NoteEvent) : Option[Output] = {
+        val result = analyzeWithoutAdvancing(note)
+        advance(note)
         return result
       }
     }
@@ -184,11 +204,22 @@ class Analyzer(val alphabet : LabelAlphabet) {
       }
     }
   }
+}
+
+
+class Analyzer {
+  val noteOnEvent = raw"\+ (\d+) (\d+) (\d+)".r
+  val noteOffEvent = raw"- (\d+) (\d+)".r
+  val timeSignature = raw"Info.*Time Signature (\d+) / (\d+)".r
+  val timing = raw"Info Timing ([\.\d]+) (\d+)".r
+  val bpm = raw"Info.*BPM (\d+)".r
+
 
   def loadInstances(filename : String) : Unit = {
     var numSongs = 0
     var numLines = 0
-    var currentSong = Song(ArrayBuffer.empty[NoteEvent])
+    var notes = ArrayBuffer.empty[NoteEvent]
+    var currentSong = Analyzer.Song(notes)
     var numSkipped = 0
     var numEmpty = 0
     var skipSong = false
@@ -199,30 +230,31 @@ class Analyzer(val alphabet : LabelAlphabet) {
       if (line.startsWith("Song")) {
         numSongs += 1
         if (!skipSong) {
-          if (currentSong.notes.isEmpty) {
+          if (notes.isEmpty) {
             numEmpty += 1
           } else {
             currentSong.analyze
           }
         }
         skipSong = false
-        currentSong = Song(ArrayBuffer.empty[NoteEvent])
+        notes = ArrayBuffer.empty[NoteEvent]
+        currentSong = Analyzer.Song(notes)
       } else {
         if (!skipSong) {
           line match {
             case noteOnEvent(tick, note, velocity) =>
               val n = note.toInt
               if (Data.isKeyInRange(n)) {
-                currentSong.notes += NoteOn(tick.toInt, n, velocity.toInt)
+                notes += NoteOn(tick.toInt, n, velocity.toInt)
               } else {
-                currentSong.notes += Skip(tick.toInt)
+                notes += Skip(tick.toInt)
               }
             case noteOffEvent(tick, note) =>
               val n = note.toInt
               if (Data.isKeyInRange(n)) {
-                currentSong.notes += NoteOff(tick.toInt, n)
+                notes += NoteOff(tick.toInt, n)
               } else {
-                currentSong.notes += Skip(tick.toInt)
+                notes += Skip(tick.toInt)
               }
             case timing(x, y) =>
               if (x.toFloat != 0.0) {

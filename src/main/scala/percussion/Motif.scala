@@ -1,6 +1,7 @@
 package ca.dubey.music.percussion
 
 import collection.mutable.ListBuffer
+import ca.dubey.music.midi.event.NoteEvent
 import ca.dubey.music.midi.event.NoteOn
 
 trait MotifSampler {
@@ -54,19 +55,29 @@ object Motif {
 abstract class Motif {
   var offset : Long
   def end : Long
-  def realize(realizer : (NoteOn)=>Unit, additionalOffset : Long = 0) : Unit
+  def realize(realizer : (NoteEvent)=>Unit, additionalOffset : Long = 0) : Unit
 }
 
-case class BaseMotif(val events : Array[NoteOn], var offset : Long = 0) extends Motif {
+case class BaseMotif(val events : Array[NoteEvent], var offset : Long = 0) extends Motif {
   override def end = events(events.size-1).tick + offset
 
   override def clone : BaseMotif = BaseMotif(events, offset)
 
-  override def realize(realizer : (NoteOn)=>Unit, additionalOffset : Long = 0) : Unit = {
+  override def realize(realizer : (NoteEvent)=>Unit, additionalOffset : Long = 0) : Unit = {
     for (note <- events) {
-      realizer(NoteOn(note.tick + offset + additionalOffset, note.key, note.velocity))
-      printf("Realizing %d+%s\n", offset+additionalOffset, note)
+      note match {
+        case on:NoteOn =>
+          realizer(NoteOn(note.tick + offset + additionalOffset, note.key, on.velocity))
+          printf("Realizing %d+%s\n", offset+additionalOffset, note)
+      }
     }
+  }
+
+  def analyzer : Analyzer.Song = {
+    val s = Analyzer.Song(events)
+    s.setPpq(960)
+    s.setTimeSignature(4,4)
+    return s
   }
 }
 
@@ -79,7 +90,7 @@ case class ComposedMotif(
     ComposedMotif((motifs.map((m:BaseMotif) => m.clone)), offset)
   }
 
-  override def realize(realizer : (NoteOn)=>Unit, additionalOffset : Long = 0) : Unit = {
+  override def realize(realizer : (NoteEvent)=>Unit, additionalOffset : Long = 0) : Unit = {
     for (motif <- motifs) {
       // This's offset should already be set via +=
       motif.realize(realizer, additionalOffset)
