@@ -52,8 +52,14 @@ object Data {
 
   def isKeyInRange(key : Int) = key > keyLow && key < keyHigh
 
+  val NORMALIZED_PPQ = 960
+
+  def normalizeTick(tick : Long, resolution : Int) : Long = {
+    tick * NORMALIZED_PPQ / resolution
+  }
+
   def quantizeTick(deltaTick : Long, resolution : Int) : Int = {
-    lastNoteQuantizer.quantize((deltaTick * 960 / resolution).toInt)
+    lastNoteQuantizer.quantize(normalizeTick(deltaTick, resolution).toInt)
   }
 
   def noteEventToString(n : NoteEvent, addTime : Long, position : Int, ppq : Int) : String = n match {
@@ -63,15 +69,6 @@ object Data {
       "- %d %d %d".format(position, quantizeTick(tick+addTime, ppq), key)
     case _ => 
       "STARTSTOP %d".format(position)
-  }
-
-
-  def normalizeTick(tick : Long, lastTick : Long, resolution : Int) : Int = {
-    (0.5 + 96.0 * (tick - lastTick) / resolution.toFloat).toInt
-  }
-
-  def unnormalizeTick(delta : Int, resolution : Int) : Long = {
-    (0.5 + (resolution.toDouble * delta) / 96.0).toLong
   }
 
   def encode(alphabet : LabelAlphabet, tick : Int, key : Int, velocity : Int, expand : Boolean = false) : Label = {

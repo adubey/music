@@ -1,22 +1,10 @@
 package ca.dubey.music.percussion
 
-import ca.dubey.music.midi.ChannelInfo
 import ca.dubey.music.midi.File
 import ca.dubey.music.midi.event.EventConsumer
 import ca.dubey.music.midi.event.TimeSignatureEvent
 import ca.dubey.music.midi.event.TempoEvent
-import cc.mallet.types.Alphabet
-import cc.mallet.types.Label
-import cc.mallet.types.LabelAlphabet
-import collection.mutable.Queue
-import java.io.BufferedInputStream
-import java.io.FileInputStream
-import java.io.IOException
-import java.io.InputStream
-import javax.sound.midi.InvalidMidiDataException
-import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
-import javax.sound.midi.ShortMessage
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.Track
 
@@ -33,11 +21,9 @@ object Extract extends App {
 }
 
 class Extract(sequence : Sequence) extends EventConsumer {
-  val channelInfos = (0 until 16).map((i) => ChannelInfo(i))
   var time : Long = 0
   var tempo : TempoEvent = null
   var timeSignature : TimeSignatureEvent = null
-  var ons = 0
   var wasExtracted = false
 
   override def init(track : Track) = {
@@ -61,7 +47,6 @@ class Extract(sequence : Sequence) extends EventConsumer {
 
   override def noteOn(track : Track, event : MidiEvent, channel : Int, key : Int, velocity : Int) = {
     if (channel == 9 && Data.isKeyInRange(key)) {
-      ons += 1
       printf("+ %d %d %d\n", event.getTick - time, key, velocity)
       wasExtracted = true
     }
@@ -69,7 +54,6 @@ class Extract(sequence : Sequence) extends EventConsumer {
 
   override def noteOff(track : Track, event : MidiEvent, channel : Int, key : Int) = {
     if (channel == 9 && Data.isKeyInRange(key)) {
-      ons -= 1
       printf("- %d %d\n", event.getTick - time, key)
       wasExtracted = true
     }
