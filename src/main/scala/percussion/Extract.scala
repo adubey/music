@@ -23,7 +23,7 @@ import javax.sound.midi.Track
 object Extract extends App {
   for (filename <- args) {
     for (sequence <- File.loadSequence(filename)) {
-      val consumer = new PercussionExtract(sequence)
+      val consumer = new Extract(sequence)
       printf("Song: %s\n", filename)
       for (track <- sequence.getTracks) {
         consumer.consume(track)
@@ -32,7 +32,7 @@ object Extract extends App {
   }
 }
 
-class PercussionExtract(sequence : Sequence) extends EventConsumer {
+class Extract(sequence : Sequence) extends EventConsumer {
   val channelInfos = (0 until 16).map((i) => ChannelInfo(i))
   var time : Long = 0
   var tempo : TempoEvent = null
@@ -40,22 +40,10 @@ class PercussionExtract(sequence : Sequence) extends EventConsumer {
   var ons = 0
   var wasExtracted = false
 
-  def normalizedTime(tick : Long) : Int = {
-    Data.normalizeTick(tick, time, sequence.getResolution)
-  }
-
-  def quantizeVelocity(velocity : Int) : Int = {
-    // return Data.velocityQuanta.quantize(velocity)
-    return velocity
-  }
-
-  def quantizeTicks(ticks : Long) : Int = {
-    // return Data.tickQuanta.quantize(normalizedTime(ticks))
-    return normalizedTime(ticks)
-  }
-
   override def init(track : Track) = {
     time = 0
+    tempo = null
+    timeSignature = null
     printf("Info Timing %f %d\n", sequence.getDivisionType, sequence.getResolution)
   }
 
